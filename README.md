@@ -40,7 +40,7 @@ DELEGATED_PASSWORD=...
 | `refresh_schedule.xlsx`  |     Sim     | Horários de refresh por gestor (`gestor`, `horarios`).        |
 | `user_dashboards.xlsx`   |     Não     | Gera `sql/carga_user_dashboards.sql` (usuário, senha, URL).   |
 
-> Colunas obrigatórias, exemplos e regras especiais: ver [USAGE.md § 4](USAGE.md#4-planilhas-de-entrada-pasta-data).
+> Colunas obrigatórias, exemplos e regras especiais: ver [USAGE.md § 5](USAGE.md#5-planilhas-de-entrada-pasta-data).
 
 ---
 
