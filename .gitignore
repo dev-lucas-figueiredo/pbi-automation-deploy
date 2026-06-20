@@ -1,0 +1,11 @@
+# Arquivos de ambiente
+.env
+
+# Ignorar todo o conteúdo dentro das pastas
+build/*
+logs/*
+sql/*
+template/*
+
+# Arquivos de dados específicos
+data/user_dashboards.xlsx
