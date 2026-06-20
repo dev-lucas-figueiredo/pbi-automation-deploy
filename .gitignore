@@ -1,14 +1,22 @@
 # Arquivos de ambiente
 .env
 
-# Ignorar todo o conteúdo dentro das pastas
+# Ignorar conteúdo das pastas, mas manter a estrutura (via .gitkeep)
 build/*
+!build/.gitkeep
 logs/*
+!logs/.gitkeep
 sql/*
+!sql/.gitkeep
 template/*
+!template/.gitkeep
+env/*
+!env/.gitkeep
 
 # Arquivos de dados específicos
 data/user_dashboards.xlsx
 
 # Arquivos gerados pelo Python
 __pycache__/
+*.py[cod]
+*$py.class
