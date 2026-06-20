@@ -10,12 +10,9 @@ sql/*
 !sql/.gitkeep
 template/*
 !template/.gitkeep
-env/
 
 # Arquivos de dados específicos
 data/user_dashboards.xlsx
 
 # Arquivos gerados pelo Python
 __pycache__/
-*.py[cod]
-*$py.class
