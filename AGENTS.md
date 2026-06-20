@@ -10,8 +10,9 @@ gera um modelo semântico + relatório por gestão, publica no Fabric e configur
 agendamento/refresh. Usuário final só executa `run_deploy.bat` — sem CLI, sem
 parâmetros, sem passos manuais.
 
-Detalhes de uso (planilhas, `.env`, fases do pipeline) estão no
-[README.md](README.md). Este arquivo trata de **como editar o código**.
+Visão geral e arquitetura estão no [README.md](README.md); detalhes de uso
+(planilhas, `.env`, fases do pipeline) estão no [USAGE.md](USAGE.md). Este
+arquivo trata de **como editar o código**.
 
 ## Risco real — leia antes de executar
 

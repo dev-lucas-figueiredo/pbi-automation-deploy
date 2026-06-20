@@ -124,7 +124,7 @@ O template é o relatório-mestre a partir do qual o pipeline gera uma cópia po
 gestão. Ele deve estar salvo no **formato `.pbip`** (Power BI Project) dentro
 da pasta `template/`.
 
-### 3.1. Como salvar no formato `.pbip`
+### 4.1. Como salvar no formato `.pbip`
 
 1. Abra o relatório no **Power BI Desktop**.
 2. Vá em **Arquivo → Salvar como**.
@@ -141,7 +141,7 @@ Ao salvar, o Power BI Desktop cria automaticamente três itens:
 | `Painel Financeiro Executivo.SemanticModel/`      | Pasta  | Modelo de dados (tabelas, medidas, relações) em TMDL.       |
 | `Painel Financeiro Executivo.Report/`             | Pasta  | Visuais, páginas, filtros e bookmarks do relatório.         |
 
-### 3.2. Requisitos do template
+### 4.2. Requisitos do template
 
 - O relatório **deve** conter um filtro de nível de relatório (report-level
   filter) na entidade `dGestão`, propriedade `RESPONSAVEL`. É esse filtro que
@@ -151,7 +151,7 @@ Ao salvar, o Power BI Desktop cria automaticamente três itens:
 - Não renomeie as pastas `.SemanticModel` e `.Report` — o pipeline depende
   dessa nomenclatura para localizar os artefatos.
 
-### 3.3. Atualizando o template
+### 4.3. Atualizando o template
 
 Para atualizar o template (ex.: novo visual, nova medida), basta:
 

@@ -28,7 +28,8 @@ DELEGATED_USER=...
 DELEGATED_PASSWORD=...
 ```
 
-> O `.env` contém segredos e **não** deve ser versionado (já está no `.gitignore`).
+> Segredos: **não** versione o `.env` (já está no `.gitignore`). Significado de
+> cada variável e regras de formato: ver [USAGE.md § 6](USAGE.md#6-configuração-do-env).
 
 ---
 
@@ -46,17 +47,14 @@ DELEGATED_PASSWORD=...
 
 ## O que o pipeline faz
 
-| Etapa / Fase | Descrição                                                                 |
-| ------------ | ------------------------------------------------------------------------- |
-| Etapa 0      | Valida credenciais, templates e planilhas.                                |
-| Etapa 1      | Autentica no Azure AD (Service Principal).                                 |
-| Etapa 2      | Inspeciona os itens existentes no workspace.                              |
-| Fase 1       | Clona o template e publica um **modelo semântico** por gestão.            |
-| Fase 2       | Publica os **relatórios** vinculados ao modelo correspondente.            |
-| Fase 3       | Pós-deploy: TakeOver, agendamento e disparo de refresh inicial.           |
-| Final        | Resumo executivo, log estruturado em `logs/` e geração de SQL.            |
+1. **Etapas 0–2 (preparação):** valida `.env`/templates/planilhas, autentica no
+   Azure AD (Service Principal) e inspeciona os itens do workspace.
+2. **Fase 1 — Modelos semânticos:** clona o template e publica um modelo por gestão.
+3. **Fase 2 — Relatórios:** publica os relatórios vinculados ao modelo correspondente.
+4. **Fase 3 — Pós-deploy:** TakeOver, agendamento e disparo do refresh inicial.
 
-Resultados ficam em `build/` (artefatos), `logs/` (JSON por execução) e `sql/`.
+Saídas em `build/` (artefatos), `logs/` (JSON por execução) e `sql/`. Detalhe
+fase a fase em [USAGE.md § 8](USAGE.md#8-o-que-acontece-em-cada-etapa).
 
 ---
 
