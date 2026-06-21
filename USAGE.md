@@ -108,13 +108,13 @@ pbi-automation-deploy/
 ├── env/                                 ← ambiente virtual Python (já incluído)
 ├── pbi_deploy/                          ← código do pipeline (não alterar)
 │
-├── build/                               ← gerado automaticamente
-├── logs/                                ← gerado automaticamente
-└── sql/                                 ← gerado automaticamente
+├── build/                               ← já incluída (inicialmente vazia, recebe relatórios gerados)
+├── logs/                                ← já incluída (inicialmente vazia, recebe os logs de execução)
+└── sql/                                 ← já incluída (inicialmente vazia, recebe scripts SQL)
 ```
 
-> As pastas `build/`, `logs/` e `sql/` são criadas automaticamente na primeira
-> execução. Não é necessário criá-las manualmente.
+> As pastas `build/`, `logs/` e `sql/` já vêm incluídas na estrutura do repositório
+> (inicialmente vazias). O pipeline irá salvar nelas os arquivos gerados durante a execução.
 
 ---
 
@@ -356,7 +356,7 @@ O que o `run_deploy.bat` faz automaticamente:
 
 | Etapa   | Nome                   | O que faz                                                                                          |
 | ------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
-| Etapa 0 | Pré-requisitos         | Valida que todas as variáveis do `.env`, templates e planilhas estão presentes. Cria pastas `build/`, `logs/`, `sql/`. |
+| Etapa 0 | Pré-requisitos         | Valida que todas as variáveis do `.env`, templates e planilhas estão presentes e garante que as pastas `build/`, `logs/` e `sql/` existam. |
 | Etapa 1 | Autenticação           | Obtém token OAuth2 do Azure AD usando o Service Principal (Client Credentials).                     |
 | Etapa 2 | Inspeção do workspace  | Lista todos os itens existentes no workspace Fabric para decidir se criará ou atualizará cada um.   |
 | Fase 1  | Modelos semânticos     | Clona o template, compila um modelo semântico por gestão e faz upload via Fabric Items API.         |
