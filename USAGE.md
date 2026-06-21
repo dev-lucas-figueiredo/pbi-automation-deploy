@@ -179,7 +179,7 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
 | Atributo       | Valor                                                              |
 | -------------- | ------------------------------------------------------------------ |
 | **Obrigatória** | Sim                                                                |
-| **Função**     | Define a lista de gestores para os quais o pipeline criará painéis |
+| **Função**     | Define a lista de gestões da FAS para os quais o pipeline criará painéis |
 | **Lida por**   | `pipeline.py` (função `_identificar_gestores`)                     |
 
 #### Colunas necessárias
@@ -187,14 +187,14 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
 | Coluna           | Tipo   | Descrição                                                                                                        |
 | ---------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
 | `RESPONSAVEL`    | Texto  | Nome da gestão da FAS a qual o relatório será destinado. Cada valor único gera um painel separado.                                            |
-| `SUPERINTENDÊNCIA` | Texto | Superintendência à qual a gestão pertence. Linhas onde `RESPONSAVEL` é igual a `SUPERINTENDÊNCIA` são **ignoradas** (filtro intencional — evita que superintendentes apareçam como gestores individuais). |
+| `SUPERINTENDÊNCIA` | Texto | Superintendência à qual a gestão pertence. Linhas onde `RESPONSAVEL` é igual a `SUPERINTENDÊNCIA` são **ignoradas** (filtro intencional — evita que superintendências apareçam como gestões individuais). |
 
 #### Exemplo
 
 | RESPONSAVEL | SUPERINTENDÊNCIA | ... (outras colunas) |
 | ----------- | ---------------- | -------------------- |
-| GESTOR A    | SUPER X          | ...                  |
-| GESTOR B    | SUPER X          | ...                  |
+| GESTÃO A    | SUPER X          | ...                  |
+| GESTÃO B    | SUPER X          | ...                  |
 | SUPER X     | SUPER X          | ← ignorado          |
 | GFP         | SUPER Y          | ...                  |
 | KFW 01      | SUPER Z          | ...                  |
@@ -230,10 +230,10 @@ existem gestões KFW:
 
 | gestor     | horarios          |
 | ---------- | ----------------- |
-| GESTOR A   | 08:00,12:00,18:00 |
-| GESTOR B   | 08:00,18:00       |
+| GESTÃO A   | 08:00,12:00,18:00 |
+| GESTÃO B   | 08:00,18:00       |
 | GFP e KFW  | 07:00,13:00       |
-| GESTOR C   |                   |
+| GESTÃO C   |                   |
 
 > **Notas:**
 > - Gestões que **não aparecem** nesta planilha recebem o horário padrão
