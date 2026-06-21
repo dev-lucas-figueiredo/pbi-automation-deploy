@@ -186,8 +186,8 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
 
 | Coluna           | Tipo   | Descrição                                                                                                        |
 | ---------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
-| `RESPONSAVEL`    | Texto  | Nome do gestor responsável. Cada valor único gera um painel separado.                                            |
-| `SUPERINTENDÊNCIA` | Texto | Superintendência à qual o gestor pertence. Linhas onde `RESPONSAVEL` é igual a `SUPERINTENDÊNCIA` são **ignoradas** (filtro intencional — evita que superintendentes apareçam como gestores individuais). |
+| `RESPONSAVEL`    | Texto  | Nome da gestão da FAS a qual o relatório será destinado. Cada valor único gera um painel separado.                                            |
+| `SUPERINTENDÊNCIA` | Texto | Superintendência à qual a gestão pertence. Linhas onde `RESPONSAVEL` é igual a `SUPERINTENDÊNCIA` são **ignoradas** (filtro intencional — evita que superintendentes apareçam como gestores individuais). |
 
 #### Exemplo
 
@@ -202,12 +202,11 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
 
 #### Regra especial: consolidado GFP e KFW
 
-O pipeline detecta automaticamente gestores cujo nome começa com `KFW`. Quando
-existem gestores KFW:
+O pipeline detecta automaticamente gestões cujo nome começa com `KFW`. Quando
+existem gestões KFW:
 
-- O gestor `GFP` é **removido** da lista individual.
-- Um painel consolidado chamado **`GFP e KFW`** é adicionado, agrupando o
-  gestor `GFP` com todos os gestores `KFW*`.
+- A gestão `GFP` é **removida** da lista individual.
+- Um painel consolidado chamado **`GFP e KFW`** é adicionado, agrupando a `GFP` com todas as gestões `KFW*`.
 - Esse painel recebe um filtro múltiplo de `RESPONSAVEL` com todos esses nomes.
 
 ---
@@ -224,7 +223,7 @@ existem gestores KFW:
 
 | Coluna     | Tipo  | Descrição                                                                                                                                      |
 | ---------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gestor`   | Texto | Nome do gestor, **exatamente como aparece** na coluna `RESPONSAVEL` de `gestao_areas.xlsx` (ou `GFP e KFW` para o consolidado).                 |
+| `gestor`   | Texto | Nome da gestão, **exatamente como aparece** na coluna `RESPONSAVEL` de `gestao_areas.xlsx` (ou `GFP e KFW` para o consolidado).                 |
 | `horarios` | Texto | Horários de refresh separados por vírgula, no formato `HH:MM`. Fuso: **SA Western Standard Time (UTC−4, Manaus)**. Se vazio, o agendamento é desativado. |
 
 #### Exemplo
@@ -237,9 +236,9 @@ existem gestores KFW:
 | GESTOR C   |                   |
 
 > **Notas:**
-> - Gestores que **não aparecem** nesta planilha recebem o horário padrão
+> - Gestões que **não aparecem** nesta planilha recebem o horário padrão
 >   `08:00, 18:00`.
-> - Gestores com a célula `horarios` **vazia** terão o agendamento
+> - Gestões com a célula `horarios` **vazia** terão o agendamento
 >   **desativado** (sem refresh automático).
 > - O agendamento roda **todos os dias da semana** (domingo a sábado).
 
@@ -257,7 +256,7 @@ existem gestores KFW:
 
 | Coluna       | Tipo  | Descrição                                                                                    |
 | ------------ | ----- | -------------------------------------------------------------------------------------------- |
-| `usuario`    | Texto | Nome de usuário para acesso ao dashboard (ex.: login do sistema externo).                     |
+| `usuario`    | Texto | Nome de usuário para acesso ao dashboard (ex.: seu.nome@fas-amazonia.org).                     |
 | `senha`      | Texto | Senha do usuário.                                                                            |
 | `url_painel` | Texto | URL do painel publicado no Power BI. Será criptografada no SQL gerado usando `URL_ENCRYPTION_KEY`. |
 
@@ -265,8 +264,8 @@ existem gestores KFW:
 
 | usuario      | senha    | url_painel                                             |
 | ------------ | -------- | ------------------------------------------------------ |
-| joao.silva   | S3nh@123 | https://app.powerbi.com/view?r=eyJ...                  |
-| maria.souza  | M@ri4!   | https://app.powerbi.com/view?r=abc...                  |
+| joao.silva@fas-amazonia.org   | S3nh@123 | https://app.powerbi.com/view?r=eyJ...                  |
+| maria.souza@fas-amazonia.org  | M@ri4!   | https://app.powerbi.com/view?r=abc...                  |
 
 #### O que o SQL gerado faz
 
@@ -395,26 +394,26 @@ vez de criar duplicatas. É seguro re-executar.
 **Sim.** O deploy é feito diretamente no workspace configurado em
 `WORKSPACE_ID`. Certifique-se de que é o workspace correto antes de executar.
 
-### Como adicionar um novo gestor?
+### Como adicionar uma nova gestão?
 
-1. Adicione uma linha na planilha `gestao_areas.xlsx` com o nome do gestor na
+1. Adicione uma linha na planilha `data/gestao_areas.xlsx` com o nome da gestão na
    coluna `RESPONSAVEL`.
-2. Opcionalmente, adicione o gestor em `refresh_schedule.xlsx` com os horários
+2. Opcionalmente, adicione a gestão em `data/refresh_schedule.xlsx` com os horários
    desejados (se não adicionar, usará `08:00, 18:00` como padrão).
 3. Execute `run_deploy.bat`.
 
-### Como remover um gestor do pipeline?
+### Como remover uma gestão do pipeline?
 
-Remova o gestor de `gestao_areas.xlsx`. Na próxima execução, o pipeline
-simplesmente não processará aquele gestor. **O painel já publicado no workspace
+Remova a gestão de `data/gestao_areas.xlsx`. Na próxima execução, o pipeline
+simplesmente não processará aquela gestão. **O painel já publicado no workspace
 não é excluído automaticamente** — você precisará removê-lo manualmente pelo
 portal do Fabric/Power BI.
 
 ### O que significa "GFP e KFW" no consolidado?
 
-Quando há gestores cujo nome começa com `KFW` na planilha, o pipeline
+Quando há gestões cujo nome começa com `KFW` na planilha, o pipeline
 automaticamente cria um painel consolidado chamado `GFP e KFW`, que filtra os
-dados por `GFP` + todos os gestores `KFW*`. Nesse caso, o gestor `GFP` não
+dados por `GFP` + todas as gestões `KFW*`. Nesse caso, a gestão `GFP` não
 recebe painel individual — apenas o consolidado.
 
 ### O que é o agendamento de refresh?
