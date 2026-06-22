@@ -1,4 +1,4 @@
-# Guia de Uso — Pipeline de Publicação Power BI
+# Guia de Uso: Pipeline de Publicação Power BI
 
 Guia completo e passo a passo de como preparar os arquivos e executar o
 pipeline. Para uma visão geral do projeto e da arquitetura, consulte o
@@ -77,7 +77,7 @@ primeira vez, você precisa adicioná-los manualmente:
 | --------------------------- | -------------------- | ----------------------------------------------------------------------------- |
 | `.env`                      | Raiz do projeto      | Solicite ao administrador do projeto. Contém credenciais Azure e chaves.       |
 | Template Power BI (`.pbip`) | Pasta `template/`    | Salve o relatório-mestre no formato `.pbip` dentro de `template/` (ver seção 4). |
-| `user_dashboards.xlsx`      | Pasta `data/`        | Solicite ao administrador. Opcional — necessário apenas para geração de SQL.  |
+| `user_dashboards.xlsx`      | Pasta `data/`        | Solicite ao administrador. Opcional, sendo necessário apenas para geração de SQL.  |
 
 Os demais arquivos (código, planilhas `gestao_areas.xlsx` e
 `refresh_schedule.xlsx`, ambiente Python `env/`, etc.) **já vêm incluídos** no
@@ -148,7 +148,7 @@ Ao salvar, o Power BI Desktop cria automaticamente três itens:
   o pipeline injeta para separar os dados por gestão.
 - O nome do projeto deve ser exatamente **`Painel Financeiro Executivo`**
   (é o valor da constante `PBI_PROJECT_NAME` em `config.py`).
-- Não renomeie as pastas `.SemanticModel` e `.Report` — o pipeline depende
+- Não renomeie as pastas `.SemanticModel` e `.Report`, pois o pipeline depende
   dessa nomenclatura para localizar os artefatos.
 
 ### 4.3. Atualizando o template
@@ -187,7 +187,7 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
 | Coluna           | Tipo   | Descrição                                                                                                        |
 | ---------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
 | `RESPONSAVEL`    | Texto  | Nome da gestão da FAS a qual o relatório será destinado. Cada valor único gera um painel separado.                                            |
-| `SUPERINTENDÊNCIA` | Texto | Superintendência à qual a gestão pertence. Linhas onde `RESPONSAVEL` é igual a `SUPERINTENDÊNCIA` são **ignoradas** (filtro intencional — evita que superintendências apareçam como gestões individuais). |
+| `SUPERINTENDÊNCIA` | Texto | Superintendência à qual a gestão pertence. Linhas onde `RESPONSAVEL` é igual a `SUPERINTENDÊNCIA` são **ignoradas** (filtro intencional para evitar que superintendências apareçam como gestões individuais). |
 
 #### Exemplo
 
@@ -271,7 +271,7 @@ existem gestões KFW:
 
 O arquivo `sql/carga_user_dashboards.sql` produzido contém:
 
-1. `SET app.url_key` — define a chave de criptografia da sessão (valor de
+1. `SET app.url_key`, que define a chave de criptografia da sessão (valor de
    `URL_ENCRYPTION_KEY` no `.env`).
 2. Uma chamada `SELECT public.upsert_user_dashboard(...)` por linha da
    planilha, criando ou atualizando o registro do usuário no banco.
@@ -371,9 +371,9 @@ Após a execução, o pipeline produz:
 
 | Pasta    | Conteúdo                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------- |
-| `build/` | Artefatos compilados (uma pasta `.SemanticModel` e uma `.Report` por gestão). Pode ser ignorada pelo usuário — é intermediária. |
+| `build/` | Artefatos compilados (uma pasta `.SemanticModel` e uma `.Report` por gestão). Pode ser ignorada pelo usuário, pois é intermediária. |
 | `logs/`  | Arquivo JSON por execução (`deploy_YYYYMMDD_HHMMSS.json`) com log detalhado de cada fase, tempos e erros. |
-| `sql/`   | `carga_user_dashboards.sql` — script SQL para carga de usuários no banco de dados (gerado apenas se `user_dashboards.xlsx` existir). |
+| `sql/`   | `carga_user_dashboards.sql`: script SQL para carga de usuários no banco de dados (gerado apenas se `user_dashboards.xlsx` existir). |
 
 ---
 
@@ -406,7 +406,7 @@ vez de criar duplicatas. É seguro re-executar.
 
 Remova a gestão de `data/gestao_areas.xlsx`. Na próxima execução, o pipeline
 simplesmente não processará aquela gestão. **O painel já publicado no workspace
-não é excluído automaticamente** — você precisará removê-lo manualmente pelo
+não é excluído automaticamente**; você precisará removê-lo manualmente pelo
 portal do Fabric/Power BI.
 
 ### O que significa "GFP e KFW" no consolidado?
@@ -414,7 +414,7 @@ portal do Fabric/Power BI.
 Quando há gestões cujo nome começa com `KFW` na planilha, o pipeline
 automaticamente cria um painel consolidado chamado `GFP e KFW`, que filtra os
 dados por `GFP` + todas as gestões `KFW*`. Nesse caso, a gestão `GFP` não
-recebe painel individual — apenas o consolidado.
+recebe painel individual, apenas o consolidado.
 
 ### O que é o agendamento de refresh?
 

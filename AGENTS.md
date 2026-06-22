@@ -1,4 +1,4 @@
-# AGENTS.md — Guia para agentes de IA
+# AGENTS.md: Guia para agentes de IA
 
 Este arquivo é a fonte de verdade para qualquer agente de IA (Claude, Copilot,
 Cursor etc.) que for editar este repositório. Leia antes de propor mudanças.
@@ -7,14 +7,14 @@ Cursor etc.) que for editar este repositório. Leia antes de propor mudanças.
 
 Pipeline de publicação Power BI / Microsoft Fabric. Clona um template `.pbip`,
 gera um modelo semântico + relatório por gestão, publica no Fabric e configura
-agendamento/refresh. Usuário final só executa `run_deploy.bat` — sem CLI, sem
-parâmetros, sem passos manuais.
+agendamento/refresh. Usuário final só executa `run_deploy.bat`, sem CLI, sem
+parâmetros, nem passos manuais.
 
 Visão geral e arquitetura estão no [README.md](README.md); detalhes de uso
 (planilhas, `.env`, fases do pipeline) estão no [USAGE.md](USAGE.md). Este
 arquivo trata de **como editar o código**.
 
-## Risco real — leia antes de executar
+## Risco real: leia antes de executar
 
 `pbi_deploy.main` faz deploy de verdade em um workspace Fabric/Power BI de
 produção e dispara refresh real dos datasets. **Não execute o pipeline
@@ -27,7 +27,7 @@ env\Scripts\python.exe -c "import pbi_deploy.main"
 ```
 
 Isso garante sintaxe e imports corretos sem tocar a API real. Não existe
-suíte de testes automatizados neste projeto — não invente uma sem alinhar
+suíte de testes automatizados neste projeto. Não invente uma sem alinhar
 com o usuário.
 
 ## Arquitetura
@@ -51,7 +51,7 @@ pbi_deploy/
 ```
 
 Regra de dependência: `config`, `console` e `errors` são a camada base e
-**nunca** importam outro módulo do pacote — evita ciclos. Todo o resto pode
+**nunca** importam outro módulo do pacote, o que evita ciclos. Todo o resto pode
 importar a camada base e os módulos de domínio (`fabric`, `powerbi`,
 `builder`, `datasources`), mas só `pipeline.py` conhece a sequência completa
 das fases.
@@ -74,11 +74,12 @@ das fases.
 - Strings voltadas ao usuário (banners, tabelas, mensagens de erro) e
   docstrings são em **português**, seguindo o padrão já existente. Não troque
   para inglês em código novo.
+- Não utilize travessões ("—" ou "–") em textos e documentações, pois isso denuncia textos gerados por IA. Use pontuação simples (vírgulas, dois-pontos, ponto e vírgula, parênteses).
 - Comentários só quando explicam um *porquê* não óbvio (ex.: por que o schema
-  PBIR exige `byConnection` e não `byItemId` — ver `builder.py`). Não
+  PBIR exige `byConnection` e não `byItemId`, ver `builder.py`). Não
   comente o que o código já deixa claro pelo nome.
 - Sem abstrações novas "para o futuro". Se três funções fizerem algo
-  parecido, isso não é motivo automático para criar uma classe/base — siga o
+  parecido, isso não é motivo automático para criar uma classe/base; siga o
   padrão funcional já usado no pacote.
 - Erros de API sempre como `errors.APIError`, nunca `Exception` genérica, para
   manter o diagnóstico estruturado (`status_code`, `headers`, `action`).
@@ -90,10 +91,10 @@ das fases.
 - `auth.get_delegated_token` e `powerbi.configurar_credenciais_sharepoint`
   existem mas **não são chamados** no fluxo principal de `pipeline.py` (a
   configuração de credenciais SharePoint é feita fora deste script hoje). Não
-  remova sem confirmar com o usuário — pode ser um próximo passo planejado.
+  remova sem confirmar com o usuário, pois pode ser um próximo passo planejado.
 - O consolidado `"GFP e KFW"` é um caso especial em `builder.clone_and_compile`
   e em `pipeline._identificar_gestores`: agrupa o gestor `GFP` com todos os
   gestores cujo nome começa com `KFW`. Qualquer mudança na regra de
   agrupamento precisa refletir nos dois lugares.
 - `gestao_areas.xlsx` ignora linhas onde `RESPONSAVEL == SUPERINTENDÊNCIA`
-  (ver `pipeline._identificar_gestores`) — não é bug, é filtro intencional.
+  (ver `pipeline._identificar_gestores`), e não é bug, é filtro intencional.

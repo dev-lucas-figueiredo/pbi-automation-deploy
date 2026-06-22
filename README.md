@@ -1,9 +1,9 @@
-# Pipeline de Publicação — Painel Financeiro Executivo
+# Pipeline de Publicação: Painel Financeiro Executivo
 
 Automação que clona um template Power BI (`.pbip`), gera um painel por gestão e
 publica tudo no Microsoft Fabric, configurando agendamento e disparo de refresh.
 
-> **Novo aqui?** Leia o [USAGE.md](USAGE.md) — guia completo de como preparar
+> **Novo aqui?** Leia o [USAGE.md](USAGE.md), um guia completo de como preparar
 > os arquivos e executar o pipeline.
 
 ---
@@ -47,11 +47,11 @@ DELEGATED_PASSWORD=...
 
 ## O que o pipeline faz
 
-1. **Etapas 0–2 (preparação):** valida `.env`/templates/planilhas, autentica no
+1. **Etapas 0 a 2 (preparação):** valida `.env`/templates/planilhas, autentica no
    Azure AD (Service Principal) e inspeciona os itens do workspace.
-2. **Fase 1 — Modelos semânticos:** clona o template e publica um modelo por gestão.
-3. **Fase 2 — Relatórios:** publica os relatórios vinculados ao modelo correspondente.
-4. **Fase 3 — Pós-deploy:** TakeOver, agendamento e disparo do refresh inicial.
+2. **Fase 1 (Modelos semânticos):** clona o template e publica um modelo por gestão.
+3. **Fase 2 (Relatórios):** publica os relatórios vinculados ao modelo correspondente.
+4. **Fase 3 (Pós-deploy):** TakeOver, agendamento e disparo do refresh inicial.
 
 Saídas em `build/` (artefatos), `logs/` (JSON por execução) e `sql/`. Detalhe
 fase a fase em [USAGE.md § 8](USAGE.md#8-o-que-acontece-em-cada-etapa).
@@ -62,7 +62,7 @@ fase a fase em [USAGE.md § 8](USAGE.md#8-o-que-acontece-em-cada-etapa).
 
 A lógica é um pacote modular. O `.bat` chama `pbi_deploy/main.py` (via
 `python -m pbi_deploy.main`), que apenas delega para o orquestrador. Cada
-módulo tem uma responsabilidade única — desenho pensado para manutenção,
+módulo tem uma responsabilidade única, um desenho pensado para manutenção,
 inclusive por agentes de IA. Detalhes de convenções para agentes estão em
 [AGENTS.md](AGENTS.md).
 
