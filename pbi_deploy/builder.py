@@ -54,6 +54,11 @@ def clone_and_compile(gestao_name):
                     gestores_kfw = df[df["RESPONSAVEL"].str.startswith("KFW", na=False)]["RESPONSAVEL"].unique().tolist()
                     valores_consolidado = ["GFP"] + gestores_kfw
                     values = [[{"Literal": {"Value": f"'{g}'"}}] for g in valores_consolidado]
+                elif gestao_name == "GRI":
+                    # Inclui todos os responsaveis da superintendencia SG
+                    df = pd.read_excel(config.EXCEL_FILE_PATH)
+                    gestores_sg = df[df["SUPERINTENDÊNCIA"] == "SG"]["RESPONSAVEL"].unique().tolist()
+                    values = [[{"Literal": {"Value": f"'{g}'"}}] for g in gestores_sg]
                 else:
                     # Injeta valor unico
                     values = [[{"Literal": {"Value": f"'{gestao_name}'"}}]]
@@ -86,7 +91,82 @@ def clone_and_compile(gestao_name):
         with open(report_json_path, "w", encoding="utf-8") as f:
             json.dump(report_json, f, ensure_ascii=False, indent=2)
 
+    # Para a GRI, restringe a pagina Pessoal apenas aos dados da propria GRI
+    if gestao_name == "GRI":
+        _injetar_filtro_pessoal_gri(target_report_folder)
+
     return new_filename, target_semantic_folder, target_report_folder
+
+
+
+def _injetar_filtro_pessoal_gri(target_report_folder):
+    """Adiciona filtro page-level RESPONSAVEL='GRI' na pagina Pessoal.
+
+    O report-level ja possui filtro com todos os responsaveis da
+    superintendencia SG. Este filtro de pagina restringe a pagina Pessoal
+    para exibir apenas os dados da GRI (interseccao com o filtro global).
+    """
+    pages_dir = os.path.join(target_report_folder, "definition", "pages")
+    if not os.path.isdir(pages_dir):
+        return
+
+    for page_folder in os.listdir(pages_dir):
+        page_json_path = os.path.join(pages_dir, page_folder, "page.json")
+        if not os.path.isfile(page_json_path):
+            continue
+
+        with open(page_json_path, "r", encoding="utf-8") as f:
+            page_data = json.load(f)
+
+        if page_data.get("displayName") != "Pessoal":
+            continue
+
+        filtro_responsavel = {
+            "name": "filtro_gri_pessoal",
+            "field": {
+                "Column": {
+                    "Expression": {
+                        "SourceRef": {"Entity": "dGestão"}
+                    },
+                    "Property": "RESPONSAVEL"
+                }
+            },
+            "type": "Categorical",
+            "filter": {
+                "Version": 2,
+                "From": [
+                    {"Name": "d", "Entity": "dGestão", "Type": 0}
+                ],
+                "Where": [
+                    {
+                        "Condition": {
+                            "In": {
+                                "Expressions": [
+                                    {
+                                        "Column": {
+                                            "Expression": {"SourceRef": {"Source": "d"}},
+                                            "Property": "RESPONSAVEL"
+                                        }
+                                    }
+                                ],
+                                "Values": [
+                                    [{"Literal": {"Value": "'GRI'"}}]
+                                ]
+                            }
+                        }
+                    }
+                ]
+            },
+            "howCreated": "User",
+            "isLockedInViewMode": True
+        }
+
+        fc = page_data.setdefault("filterConfig", {})
+        fc.setdefault("filters", []).append(filtro_responsavel)
+
+        with open(page_json_path, "w", encoding="utf-8") as f:
+            json.dump(page_data, f, ensure_ascii=False, indent=2)
+        break
 
 
 def fix_report_cloud_reference(target_report_folder, cloud_dataset_id):
