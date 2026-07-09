@@ -209,6 +209,18 @@ existem gestões KFW:
 - Um painel consolidado chamado **`GFP e KFW`** é adicionado, agrupando a `GFP` com todas as gestões `KFW*`.
 - Esse painel recebe um filtro múltiplo de `RESPONSAVEL` com todos esses nomes.
 
+#### Regra especial: painel da GRI com dados da superintendência SG
+
+O painel da `GRI` exibe dados de **todos os responsáveis cuja `SUPERINTENDÊNCIA` é `SG`**
+(`GRI`, `PDI`, `PPI` e `SG`), lidos dinamicamente da planilha. Excecao: a pagina
+**Pessoal** exibe apenas os dados da propria `GRI` (filtro de pagina adicional).
+
+- Nenhuma dessas gestoes perde seu painel individual.
+- A `SG` continua suprimida como painel individual (regra `RESPONSAVEL == SUPERINTENDENCIA`),
+  mas seus dados aparecem no painel da `GRI`.
+- Para alterar quais gestores compoe o consolidado da GRI, edite
+  `builder.clone_and_compile` (caso `elif gestao_name == "GRI"`).
+
 ---
 
 ### 5.2. `refresh_schedule.xlsx`

@@ -61,7 +61,7 @@ das fases.
 - **Nova chamada à Fabric Items API** → `fabric.py`.
 - **Nova chamada à Power BI REST API** (datasets, refresh, gateways) → `powerbi.py`.
 - **Mudança na regra de geração do relatório por gestão** (filtro, consolidado
-  GFP/KFW) → `builder.py` (`clone_and_compile`).
+  GFP/KFW, consolidado GRI/SG) → `builder.py` (`clone_and_compile` e `_injetar_filtro_pessoal_gri`).
 - **Nova fase no pipeline** → defina a função `processar_um` em `pipeline.py`
   e chame `runner.executar_fase(...)`; não duplique a lógica de
   progresso/tabela/log que já existe em `runner.py`.
@@ -96,5 +96,14 @@ das fases.
   e em `pipeline._identificar_gestores`: agrupa o gestor `GFP` com todos os
   gestores cujo nome começa com `KFW`. Qualquer mudança na regra de
   agrupamento precisa refletir nos dois lugares.
-- `gestao_areas.xlsx` ignora linhas onde `RESPONSAVEL == SUPERINTENDÊNCIA`
-  (ver `pipeline._identificar_gestores`), e não é bug, é filtro intencional.
+- O painel da `GRI` é um caso especial tratado exclusivamente em
+  `builder.clone_and_compile`: o filtro report-level inclui todos os
+  `RESPONSAVEL` cuja `SUPERINTENDÊNCIA == 'SG'` (ou seja, `GRI`, `PDI`, `PPI`
+  e `SG`), lidos dinamicamente da planilha. A pagina `Pessoal` recebe um
+  filtro page-level adicional que restringe `RESPONSAVEL = 'GRI'`, mantendo
+  dados de RH apenas da propria GRI. Esse comportamento e gerenciado pela
+  funcao auxiliar `_injetar_filtro_pessoal_gri`.
+- `gestao_areas.xlsx` ignora linhas onde `RESPONSAVEL == SUPERINTENDENCIA`
+  (ver `pipeline._identificar_gestores`), e nao e bug, e filtro intencional.
+  Excecao: `SG` e suprimida como painel individual, mas seus dados aparecem
+  no painel consolidado da `GRI` (ver ponto anterior).
