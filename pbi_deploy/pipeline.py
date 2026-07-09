@@ -87,6 +87,12 @@ def main():
     console.print(f"\n[bold cyan]Gestores identificados na planilha:[/bold cyan] {len(gestores) - (1 if gestores_kfw else 0)}")
     if gestores_kfw:
         console.print(f"[bold cyan]Painel consolidado GFP e KFW adicionado[/bold cyan] (agrupa GFP + {len(gestores_kfw)} gestões KFW)")
+    if "GRI" in gestores:
+        gestores_sg = df[df["SUPERINTENDÊNCIA"] == "SG"]["RESPONSAVEL"].unique().tolist()
+        console.print(
+            f"[bold cyan]Painel GRI ampliado:[/bold cyan] inclui todos os responsaveis da superintendencia SG "
+            f"({', '.join(gestores_sg)}) | pagina Pessoal restrita a GRI"
+        )
 
     memoria_deploy = {}
 
