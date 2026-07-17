@@ -31,7 +31,7 @@ LOG_DIR = "logs"
 SQL_DIR = "sql"
 
 # --- Planilhas de entrada ----------------------------------------------------
-EXCEL_FILE_PATH = os.path.join("data", "gestao_areas.xlsx")
+LIDERES_PROJETO_PATH = os.path.join("data", "lideres_projeto.xlsx")
 REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule.xlsx")
 USER_DASHBOARDS_PATH = os.path.join("data", "user_dashboards.xlsx")
 

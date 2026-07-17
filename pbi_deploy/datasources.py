@@ -1,8 +1,8 @@
 """Leitura das planilhas de entrada e geracao do SQL de user_dashboards.
 
 Fonte de dados do pipeline:
-    gestao_areas.xlsx       lista de gestores (coluna RESPONSAVEL).
-    refresh_schedule.xlsx   horarios de refresh por gestor.
+    lideres_projeto.xlsx    mapeamento lider -> doacao (define os paineis).
+    refresh_schedule.xlsx   horarios de refresh por lider.
     user_dashboards.xlsx    credenciais/URLs para gerar o SQL de carga.
 """
 
@@ -17,24 +17,65 @@ from . import config
 from .console import console
 
 
+def _normalizar_doacao(valor):
+    """Aplica a mesma normalizacao da coluna dDoação.DOAÇÃO no modelo.
+
+    O modelo usa Text.Upper(Text.Trim(Text.Clean(...))): remove caracteres de
+    controle, apara as pontas e coloca em maiuscula. Replicamos exatamente para
+    que os valores do mapeamento casem com os do modelo no filtro do painel.
+    """
+    s = "".join(ch for ch in str(valor) if ord(ch) >= 32)
+    return s.strip().upper()
+
+
+def carregar_lideres_doacoes():
+    """
+    Le data/lideres_projeto.xlsx e retorna dict {lider: [doacoes]}.
+
+    Cada linha e um par (lider, doacao). Linhas com lider ou doacao vazios sao
+    ignoradas. As doacoes sao normalizadas para casar com dDoação.DOAÇÃO e
+    deduplicadas por lider preservando a ordem de leitura.
+    """
+    df = pd.read_excel(config.LIDERES_PROJETO_PATH, dtype=str)
+
+    for col in ("lider", "doacao"):
+        if col not in df.columns:
+            raise Exception(f"Coluna '{col}' ausente em {config.LIDERES_PROJETO_PATH}")
+
+    lideres = {}
+    for _, row in df.iterrows():
+        lider = str(row.get("lider", "")).strip()
+        doacao = _normalizar_doacao(row.get("doacao", ""))
+        if not lider or lider.lower() == "nan":
+            continue
+        if not doacao or doacao == "NAN":
+            continue
+        doacoes = lideres.setdefault(lider, [])
+        if doacao not in doacoes:
+            doacoes.append(doacao)
+    return lideres
+
+
 def carregar_schedule():
     """
-    Le refresh_schedule.xlsx e retorna dict {gestor: [horarios]}.
-    Gestores com celula 'horarios' vazia sao ignorados (sem agendamento).
-    Fallback para horarios padrao se o gestor nao estiver na planilha.
+    Le refresh_schedule.xlsx e retorna dict {lider: [horarios]}.
+    Lideres com celula 'horarios' vazia sao ignorados (sem agendamento).
+    Fallback para horarios padrao se o lider nao estiver na planilha.
+    Aceita a coluna nova 'lider' ou a antiga 'gestor' (compatibilidade).
     """
     df = pd.read_excel(config.REFRESH_SCHEDULE_PATH, dtype=str)
+    coluna_chave = "lider" if "lider" in df.columns else "gestor"
     schedule = {}
     for _, row in df.iterrows():
-        gestor = str(row.get("gestor", "")).strip()
+        chave = str(row.get(coluna_chave, "")).strip()
         horarios_raw = str(row.get("horarios", "")).strip()
-        if not gestor:
+        if not chave or chave.lower() == "nan":
             continue
         if not horarios_raw or horarios_raw.lower() in ("nan", ""):
-            schedule[gestor] = []  # vazio = sem agendamento automatico
+            schedule[chave] = []  # vazio = sem agendamento automatico
         else:
             horarios = [h.strip() for h in horarios_raw.split(",") if h.strip()]
-            schedule[gestor] = horarios
+            schedule[chave] = horarios
     return schedule
 
 

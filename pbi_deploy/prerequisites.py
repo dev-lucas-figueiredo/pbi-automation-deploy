@@ -43,7 +43,7 @@ def verificar_pre_requisitos():
     caminhos = [
         (config.BASE_SEMANTIC_MODEL, "Template SemanticModel"),
         (config.BASE_REPORT, "Template Report"),
-        (config.EXCEL_FILE_PATH, "Planilha de gestores"),
+        (config.LIDERES_PROJETO_PATH, "Planilha de lideres/doacoes"),
         (config.REFRESH_SCHEDULE_PATH, "Planilha de agendamento"),
     ]
     for caminho, label in caminhos:

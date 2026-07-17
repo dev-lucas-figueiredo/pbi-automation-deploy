@@ -18,7 +18,6 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-import pandas as pd
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -30,30 +29,9 @@ from .auth import autenticar_azure
 from .fabric import listar_itens_workspace, upload_item_to_fabric
 from .powerbi import takeover_dataset, configurar_refresh_schedule, disparar_refresh
 from .builder import clone_and_compile, fix_report_cloud_reference
-from .datasources import carregar_schedule, gerar_sql_user_dashboards
+from .datasources import carregar_lideres_doacoes, carregar_schedule, gerar_sql_user_dashboards
 from .prerequisites import verificar_pre_requisitos
 from .runner import executar_fase
-
-
-def _identificar_gestores(df):
-    """Extrai a lista de gestores validos da planilha e monta o consolidado KFW.
-
-    Retorna (gestores, gestores_kfw, gestores_invalidos).
-    """
-    # Remove gestores onde RESPONSAVEL == SUPERINTENDÊNCIA
-    mask_invalidos = df["RESPONSAVEL"].fillna("") == df["SUPERINTENDÊNCIA"].fillna("")
-    gestores_invalidos = df[mask_invalidos]["RESPONSAVEL"].dropna().unique().tolist()
-    df_validos = df[~mask_invalidos]
-
-    gestores = df_validos["RESPONSAVEL"].dropna().unique().tolist()
-
-    # Identifica gestoes KFW, inclui GFP no consolidado e remove GFP da lista individual
-    gestores_kfw = [g for g in gestores if str(g).startswith("KFW")]
-    if gestores_kfw:
-        gestores = [g for g in gestores if g != "GFP"]
-        gestores.append("GFP e KFW")
-
-    return gestores, gestores_kfw, gestores_invalidos
 
 
 def main():
@@ -76,33 +54,24 @@ def main():
     token = autenticar_azure()
     items_na_nuvem = listar_itens_workspace(token)
 
-    df = pd.read_excel(config.EXCEL_FILE_PATH)
-    gestores, gestores_kfw, gestores_invalidos = _identificar_gestores(df)
+    lideres = carregar_lideres_doacoes()
+    lideres_lista = list(lideres.keys())
+    total_doacoes = sum(len(v) for v in lideres.values())
 
-    if gestores_invalidos:
-        console.print(
-            f"[dim]Ignorados por RESPONSAVEL == SUPERINTENDÊNCIA: {', '.join(gestores_invalidos)}[/dim]\n"
-        )
-
-    console.print(f"\n[bold cyan]Gestores identificados na planilha:[/bold cyan] {len(gestores) - (1 if gestores_kfw else 0)}")
-    if gestores_kfw:
-        console.print(f"[bold cyan]Painel consolidado GFP e KFW adicionado[/bold cyan] (agrupa GFP + {len(gestores_kfw)} gestões KFW)")
-    if "GRI" in gestores:
-        gestores_sg = df[df["SUPERINTENDÊNCIA"] == "SG"]["RESPONSAVEL"].unique().tolist()
-        console.print(
-            f"[bold cyan]Painel GRI ampliado:[/bold cyan] inclui todos os responsaveis da superintendencia SG "
-            f"({', '.join(gestores_sg)}) | pagina Pessoal restrita a GRI"
-        )
+    console.print(
+        f"\n[bold cyan]Lideres identificados na planilha:[/bold cyan] {len(lideres_lista)} "
+        f"([dim]{total_doacoes} doacoes mapeadas[/dim])"
+    )
 
     memoria_deploy = {}
 
     # --- FASE 1: modelos semanticos ---
-    def processar_modelo(gestor):
-        nome_final, pasta_model, pasta_report = clone_and_compile(gestor)
+    def processar_modelo(lider):
+        nome_final, pasta_model, pasta_report = clone_and_compile(lider, lideres[lider])
         status, dataset_id = upload_item_to_fabric(
             token, nome_final, "SemanticModel", pasta_model, items_na_nuvem
         )
-        memoria_deploy[gestor] = {
+        memoria_deploy[lider] = {
             "nome_final": nome_final,
             "pasta_report": pasta_report,
             "dataset_id": dataset_id,
@@ -111,8 +80,8 @@ def main():
 
     log_fase1 = executar_fase(
         "FASE 1 / MODELOS SEMANTICOS",
-        f"Compilacao e deploy de {len(gestores)} modelos",
-        gestores,
+        f"Compilacao e deploy de {len(lideres_lista)} modelos",
+        lideres_lista,
         processar_modelo,
         cor="bright_magenta",
     )
@@ -127,19 +96,19 @@ def main():
     )
 
     # --- FASE 2: relatorios vinculados ---
-    def processar_relatorio(gestor):
-        dados = memoria_deploy[gestor]
+    def processar_relatorio(lider):
+        dados = memoria_deploy[lider]
         fix_report_cloud_reference(dados["pasta_report"], dados["dataset_id"])
         status, item_id = upload_item_to_fabric(
             token, dados["nome_final"], "Report", dados["pasta_report"], items_atualizados
         )
         return status, f"report_id={mask(item_id) if item_id else 'LRO'}"
 
-    gestores_fase2 = list(memoria_deploy.keys())
+    lideres_fase2 = list(memoria_deploy.keys())
     log_fase2 = executar_fase(
         "FASE 2 / RELATORIOS VINCULADOS",
-        f"Deploy de {len(gestores_fase2)} relatorios",
-        gestores_fase2,
+        f"Deploy de {len(lideres_fase2)} relatorios",
+        lideres_fase2,
         processar_relatorio,
         cor="bright_magenta",
     )
@@ -152,14 +121,14 @@ def main():
     )
 
     schedule_map = carregar_schedule()
-    console.print(f"  Agendamentos carregados de [cyan]refresh_schedule.xlsx[/cyan]: {len(schedule_map)} gestores\n")
+    console.print(f"  Agendamentos carregados de [cyan]refresh_schedule.xlsx[/cyan]: {len(schedule_map)} lideres\n")
 
-    def processar_pos_deploy(gestor):
-        dataset_id = memoria_deploy[gestor]["dataset_id"]
+    def processar_pos_deploy(lider):
+        dataset_id = memoria_deploy[lider]["dataset_id"]
         if not dataset_id:
             raise Exception("dataset_id ausente")
 
-        horarios = schedule_map.get(gestor, ["08:00", "18:00"])
+        horarios = schedule_map.get(lider, ["08:00", "18:00"])
 
         takeover_dataset(token, dataset_id)
         configurar_refresh_schedule(token, dataset_id, horarios)
@@ -168,11 +137,11 @@ def main():
         schedule_str = ",".join(horarios) if horarios else "desativado"
         return "Configurado", f"schedule={schedule_str} | refresh enfileirado"
 
-    gestores_fase3 = list(memoria_deploy.keys())
+    lideres_fase3 = list(memoria_deploy.keys())
     log_fase3 = executar_fase(
         "FASE 3 / POS-DEPLOY",
-        f"Configurando {len(gestores_fase3)} modelos",
-        gestores_fase3,
+        f"Configurando {len(lideres_fase3)} modelos",
+        lideres_fase3,
         processar_pos_deploy,
         cor="bright_magenta",
     )

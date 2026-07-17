@@ -6,7 +6,8 @@ Cursor etc.) que for editar este repositório. Leia antes de propor mudanças.
 ## O que é este projeto
 
 Pipeline de publicação Power BI / Microsoft Fabric. Clona um template `.pbip`,
-gera um modelo semântico + relatório por gestão, publica no Fabric e configura
+gera um modelo semântico + relatório por líder de projeto (cada painel filtrado
+pelas doações que aquele líder lidera), publica no Fabric e configura
 agendamento/refresh. Usuário final só executa `run_deploy.bat`, sem CLI, sem
 parâmetros, nem passos manuais.
 
@@ -43,8 +44,8 @@ pbi_deploy/
 ├── auth.py              Azure AD: token de app (SPN) e token delegado (ROPC).
 ├── fabric.py             Fabric Items API: listar itens, build payload, criar/atualizar, poll_lro.
 ├── powerbi.py            Power BI REST: TakeOver, credenciais SharePoint, refresh schedule/trigger.
-├── builder.py            Clona template -> build/, injeta filtro de gestão, fixa referência do dataset.
-├── datasources.py        Lê planilhas (schedule) e gera sql/carga_user_dashboards.sql.
+├── builder.py            Clona template -> build/, injeta filtro de doações do líder, fixa referência do dataset.
+├── datasources.py        Lê planilhas (líderes/doações, schedule) e gera sql/carga_user_dashboards.sql.
 ├── prerequisites.py      Etapa 0: valida .env, templates, planilhas, cria pastas.
 ├── runner.py             executar_fase(): loop genérico com progress bar + tabela + log por item.
 └── pipeline.py           Orquestra as fases em main()/run(); único módulo que conhece a ordem completa.
@@ -60,8 +61,10 @@ das fases.
 
 - **Nova chamada à Fabric Items API** → `fabric.py`.
 - **Nova chamada à Power BI REST API** (datasets, refresh, gateways) → `powerbi.py`.
-- **Mudança na regra de geração do relatório por gestão** (filtro, consolidado
-  GFP/KFW, consolidado GRI/SG) → `builder.py` (`clone_and_compile` e `_injetar_filtro_pessoal_gri`).
+- **Mudança na regra de geração do relatório por líder** (filtro de doações) →
+  `builder.py` (`clone_and_compile` e `_montar_filtro_doacao`).
+- **Mudança na leitura do mapeamento líder → doação** → `datasources.py`
+  (`carregar_lideres_doacoes` e `_normalizar_doacao`).
 - **Nova fase no pipeline** → defina a função `processar_um` em `pipeline.py`
   e chame `runner.executar_fase(...)`; não duplique a lógica de
   progresso/tabela/log que já existe em `runner.py`.
@@ -92,18 +95,17 @@ das fases.
   existem mas **não são chamados** no fluxo principal de `pipeline.py` (a
   configuração de credenciais SharePoint é feita fora deste script hoje). Não
   remova sem confirmar com o usuário, pois pode ser um próximo passo planejado.
-- O consolidado `"GFP e KFW"` é um caso especial em `builder.clone_and_compile`
-  e em `pipeline._identificar_gestores`: agrupa o gestor `GFP` com todos os
-  gestores cujo nome começa com `KFW`. Qualquer mudança na regra de
-  agrupamento precisa refletir nos dois lugares.
-- O painel da `GRI` é um caso especial tratado exclusivamente em
-  `builder.clone_and_compile`: o filtro report-level inclui todos os
-  `RESPONSAVEL` cuja `SUPERINTENDÊNCIA == 'SG'` (ou seja, `GRI`, `PDI`, `PPI`
-  e `SG`), lidos dinamicamente da planilha. A pagina `Pessoal` recebe um
-  filtro page-level adicional que restringe `RESPONSAVEL = 'GRI'`, mantendo
-  dados de RH apenas da propria GRI. Esse comportamento e gerenciado pela
-  funcao auxiliar `_injetar_filtro_pessoal_gri`.
-- `gestao_areas.xlsx` ignora linhas onde `RESPONSAVEL == SUPERINTENDENCIA`
-  (ver `pipeline._identificar_gestores`), e nao e bug, e filtro intencional.
-  Excecao: `SG` e suprimida como painel individual, mas seus dados aparecem
-  no painel consolidado da `GRI` (ver ponto anterior).
+- O eixo de segmentação é o **líder de projeto**: `pipeline.main` itera sobre os
+  líderes de `lideres_projeto.xlsx` e cada painel recebe um filtro report-level
+  `dDoação.DOAÇÃO IN (doações do líder)`. `clone_and_compile` **substitui** todo o
+  `filterConfig` do report por esse filtro; o template não precisa carregar
+  nenhum filtro placeholder.
+- Os nomes de doação do mapeamento precisam casar com a coluna `dDoação.DOAÇÃO`
+  do modelo, que é normalizada com `Text.Upper(Text.Trim(Text.Clean(...)))`.
+  `datasources._normalizar_doacao` replica essa regra; se um painel de líder vier
+  vazio, o suspeito número um é um nome de doação digitado diferente do modelo.
+- Uma mesma doação pode aparecer para mais de um líder (aparece no painel de
+  cada um). Isso é intencional, não há restrição de unicidade.
+- A tabela `dGestão` e a coluna `RESPONSAVEL` continuam no modelo (relações
+  intactas), mas não são mais o eixo dos painéis. `gestao_areas.xlsx` foi
+  aposentada como entrada do pipeline.

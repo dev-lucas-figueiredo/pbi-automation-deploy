@@ -1,7 +1,8 @@
 # Pipeline de Publicação: Painel Financeiro Executivo
 
-Automação que clona um template Power BI (`.pbip`), gera um painel por gestão e
-publica tudo no Microsoft Fabric, configurando agendamento e disparo de refresh.
+Automação que clona um template Power BI (`.pbip`), gera um painel por líder de
+projeto (filtrado pelas doações que ele lidera) e publica tudo no Microsoft
+Fabric, configurando agendamento e disparo de refresh.
 
 > **Novo aqui?** Leia o [USAGE.md](USAGE.md), um guia completo de como preparar
 > os arquivos e executar o pipeline.
@@ -35,11 +36,11 @@ DELEGATED_PASSWORD=...
 
 ## Planilhas de entrada (`data/`)
 
-| Arquivo                  | Obrigatório | Função                                                        |
-| ------------------------ | :---------: | ------------------------------------------------------------- |
-| `gestao_areas.xlsx`      |     Sim     | Lista de gestores (coluna `RESPONSAVEL`).                     |
-| `refresh_schedule.xlsx`  |     Sim     | Horários de refresh por gestor (`gestor`, `horarios`).        |
-| `user_dashboards.xlsx`   |     Não     | Gera `sql/carga_user_dashboards.sql` (usuário, senha, URL).   |
+| Arquivo                  | Obrigatório | Função                                                          |
+| ------------------------ | :---------: | -------------------------------------------------------------- |
+| `lideres_projeto.xlsx`   |     Sim     | Mapeamento líder -> doação (`lider`, `doacao`). Define os painéis. |
+| `refresh_schedule.xlsx`  |     Sim     | Horários de refresh por líder (`lider`, `horarios`).           |
+| `user_dashboards.xlsx`   |     Não     | Gera `sql/carga_user_dashboards.sql` (usuário, senha, URL).    |
 
 > Colunas obrigatórias, exemplos e regras especiais: ver [USAGE.md § 5](USAGE.md#5-planilhas-de-entrada-pasta-data).
 
@@ -49,7 +50,7 @@ DELEGATED_PASSWORD=...
 
 1. **Etapas 0 a 2 (preparação):** valida `.env`/templates/planilhas, autentica no
    Azure AD (Service Principal) e inspeciona os itens do workspace.
-2. **Fase 1 (Modelos semânticos):** clona o template e publica um modelo por gestão.
+2. **Fase 1 (Modelos semânticos):** clona o template e publica um modelo por líder.
 3. **Fase 2 (Relatórios):** publica os relatórios vinculados ao modelo correspondente.
 4. **Fase 3 (Pós-deploy):** TakeOver, agendamento e disparo do refresh inicial.
 
@@ -78,7 +79,7 @@ pbi_deploy/
 ├── auth.py               Autenticação Azure AD (Service Principal e delegado).
 ├── fabric.py             Fabric Items API: listar, criar/atualizar, poll LRO.
 ├── powerbi.py            Power BI REST: TakeOver, schedule, refresh, SharePoint.
-├── builder.py            Clonagem/compilação dos artefatos .pbip por gestão.
+├── builder.py            Clonagem/compilação dos artefatos .pbip por líder.
 ├── datasources.py        Leitura das planilhas e geração de SQL.
 ├── prerequisites.py      Validação de pré-requisitos (Etapa 0).
 ├── runner.py             Executor genérico de uma fase (progresso + tabela).

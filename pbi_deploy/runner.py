@@ -1,8 +1,8 @@
 """Executor generico de uma fase do pipeline.
 
-Recebe a lista de gestores e uma funcao `processar_um(gestor)` que retorna
+Recebe a lista de lideres e uma funcao `processar_um(lider)` que retorna
 (status, detalhe) ou levanta excecao. Cuida de barra de progresso, tabela de
-resultados, contagem de sucessos/falhas e do log estruturado por gestor.
+resultados, contagem de sucessos/falhas e do log estruturado por lider.
 """
 
 import time
@@ -22,8 +22,8 @@ from .console import console, banner
 from .errors import APIError
 
 
-def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
-    """Roda `processar_um` para cada gestor e retorna a lista de resultados."""
+def executar_fase(titulo_fase, subtitulo, lideres, processar_um, cor="green"):
+    """Roda `processar_um` para cada lider e retorna a lista de resultados."""
     banner(titulo_fase, subtitulo, cor=cor)
 
     resultados = []
@@ -31,7 +31,7 @@ def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
 
     tabela = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE_HEAVY)
     tabela.add_column("#", style="dim", justify="right", width=4)
-    tabela.add_column("Gestao", width=14, style="white")
+    tabela.add_column("Lider", width=18, style="white")
     tabela.add_column("Status", justify="center", width=10)
     tabela.add_column("Acao", width=14, style="cyan")
     tabela.add_column("Tempo", justify="right", width=8, style="dim")
@@ -46,17 +46,17 @@ def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
         console=console,
         transient=True,
     ) as progress:
-        task = progress.add_task(titulo_fase, total=len(gestores))
+        task = progress.add_task(titulo_fase, total=len(lideres))
 
-        for idx, gestor in enumerate(gestores, 1):
-            progress.update(task, description=f"Processando [{gestor}]")
+        for idx, lider in enumerate(lideres, 1):
+            progress.update(task, description=f"Processando [{lider}]")
             t0 = time.time()
             try:
-                status, detalhe = processar_um(gestor)
+                status, detalhe = processar_um(lider)
                 elapsed = time.time() - t0
                 tabela.add_row(
                     str(idx),
-                    gestor,
+                    lider,
                     "[green]OK[/green]",
                     status,
                     f"{elapsed:.1f}s",
@@ -64,7 +64,7 @@ def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
                 )
                 resultados.append(
                     {
-                        "gestor": gestor,
+                        "lider": lider,
                         "ok": True,
                         "status": status,
                         "tempo_s": round(elapsed, 2),
@@ -76,7 +76,7 @@ def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
                 elapsed = time.time() - t0
                 tabela.add_row(
                     str(idx),
-                    gestor,
+                    lider,
                     "[red]ERRO[/red]",
                     e.action,
                     f"{elapsed:.1f}s",
@@ -84,7 +84,7 @@ def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
                 )
                 resultados.append(
                     {
-                        "gestor": gestor,
+                        "lider": lider,
                         "ok": False,
                         "status": "ERRO",
                         "tempo_s": round(elapsed, 2),
@@ -99,7 +99,7 @@ def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
                 detalhe = f"{type(e).__name__}: {str(e)[:300]}"
                 tabela.add_row(
                     str(idx),
-                    gestor,
+                    lider,
                     "[red]ERRO[/red]",
                     "interno",
                     f"{elapsed:.1f}s",
@@ -107,7 +107,7 @@ def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
                 )
                 resultados.append(
                     {
-                        "gestor": gestor,
+                        "lider": lider,
                         "ok": False,
                         "status": "ERRO",
                         "tempo_s": round(elapsed, 2),
@@ -124,6 +124,6 @@ def executar_fase(titulo_fase, subtitulo, gestores, processar_um, cor="green"):
         f"  [bold]Resultado:[/bold] [green]{sucessos} OK[/green]  "
         f"[red]{falhas} ERRO[/red]  "
         f"taxa de sucesso: [{cor_taxa}]"
-        f"{(sucessos / max(len(gestores), 1) * 100):.1f}%[/{cor_taxa}]"
+        f"{(sucessos / max(len(lideres), 1) * 100):.1f}%[/{cor_taxa}]"
     )
     return resultados

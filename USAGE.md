@@ -13,7 +13,7 @@ pipeline. Para uma visão geral do projeto e da arquitetura, consulte o
 3. [Estrutura de pastas esperada](#3-estrutura-de-pastas-esperada)
 4. [Preparação do template Power BI](#4-preparação-do-template-power-bi)
 5. [Planilhas de entrada (pasta `data/`)](#5-planilhas-de-entrada-pasta-data)
-   - 5.1 [`gestao_areas.xlsx`](#51-gestao_areasxlsx)
+   - 5.1 [`lideres_projeto.xlsx`](#51-lideres_projetoxlsx)
    - 5.2 [`refresh_schedule.xlsx`](#52-refresh_schedulexlsx)
    - 5.3 [`user_dashboards.xlsx`](#53-user_dashboardsxlsx)
 6. [Configuração do `.env`](#6-configuração-do-env)
@@ -47,7 +47,7 @@ pipeline. Para uma visão geral do projeto e da arquitetura, consulte o
    │ Modelos     │  │ Relatórios  │   │ Pós-deploy  │
    │ Semânticos  │  │ Vinculados  │   │ TakeOver +  │
    │ (1 por      │  │ (1 por      │   │ Agendamento │
-   │  gestão)    │  │  gestão)    │   │ + Refresh   │
+   │  líder)     │  │  líder)     │   │ + Refresh   │
    └─────────────┘  └─────────────┘   └─────────────┘
           │                 │                  │
           └─────────────────┼──────────────────┘
@@ -60,10 +60,10 @@ pipeline. Para uma visão geral do projeto e da arquitetura, consulte o
                    └────────────────────┘
 ```
 
-O pipeline lê o template Power BI, clona uma cópia por gestão (injetando o
-filtro de `RESPONSAVEL`), publica cada modelo semântico e relatório no
-Microsoft Fabric, e por fim configura agendamento de refresh e dispara uma
-atualização inicial.
+O pipeline lê o template Power BI, clona uma cópia por líder de projeto
+(injetando o filtro com as doações daquele líder na entidade `dDoação`),
+publica cada modelo semântico e relatório no Microsoft Fabric, e por fim
+configura agendamento de refresh e dispara uma atualização inicial.
 
 ---
 
@@ -77,11 +77,11 @@ primeira vez, você precisa adicioná-los manualmente:
 | --------------------------- | -------------------- | ----------------------------------------------------------------------------- |
 | `.env`                      | Raiz do projeto      | Solicite ao administrador do projeto. Contém credenciais Azure e chaves.       |
 | Template Power BI (`.pbip`) | Pasta `template/`    | Salve o relatório-mestre no formato `.pbip` dentro de `template/` (ver seção 4). |
+| `lideres_projeto.xlsx`      | Pasta `data/`        | Monte o mapeamento líder -> doação (ver seção 5.1). Define quais painéis serão gerados. |
 | `user_dashboards.xlsx`      | Pasta `data/`        | Solicite ao administrador. Opcional, sendo necessário apenas para geração de SQL.  |
 
-Os demais arquivos (código, planilhas `gestao_areas.xlsx` e
-`refresh_schedule.xlsx`, ambiente Python `env/`, etc.) **já vêm incluídos** no
-download e estão prontos para uso.
+Os demais arquivos (código, planilha `refresh_schedule.xlsx`, ambiente Python
+`env/`, etc.) **já vêm incluídos** no download e estão prontos para uso.
 
 ---
 
@@ -96,7 +96,7 @@ pbi-automation-deploy/
 ├── requirements.txt                     ← dependências Python
 │
 ├── data/                                ← planilhas de entrada (ver seção 5)
-│   ├── gestao_areas.xlsx                   (já incluída no download)
+│   ├── lideres_projeto.xlsx                (adicionar manualmente, ver seção 5.1)
 │   ├── refresh_schedule.xlsx               (já incluída no download)
 │   └── user_dashboards.xlsx                (adicionar manualmente, opcional)
 │
@@ -143,9 +143,10 @@ Ao salvar, o Power BI Desktop cria automaticamente três itens:
 
 ### 4.2. Requisitos do template
 
-- O relatório **deve** conter um filtro de nível de relatório (report-level
-  filter) na entidade `dGestão`, propriedade `RESPONSAVEL`. É esse filtro que
-  o pipeline injeta para separar os dados por gestão.
+- O modelo semântico **deve** conter a tabela `dDoação` com a coluna `DOAÇÃO`.
+  É nessa entidade que o pipeline injeta o filtro report-level com as doações
+  de cada líder. O pipeline substitui todo o filtro de nível de relatório na
+  cópia gerada, então não é preciso deixar nenhum filtro placeholder no template.
 - O nome do projeto deve ser exatamente **`Painel Financeiro Executivo`**
   (é o valor da constante `PBI_PROJECT_NAME` em `config.py`).
 - Não renomeie as pastas `.SemanticModel` e `.Report`, pois o pipeline depende
@@ -174,52 +175,42 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
 
 ---
 
-### 5.1. `gestao_areas.xlsx`
+### 5.1. `lideres_projeto.xlsx`
 
-| Atributo       | Valor                                                              |
-| -------------- | ------------------------------------------------------------------ |
-| **Obrigatória** | Sim                                                                |
-| **Função**     | Define a lista de gestões da FAS para os quais o pipeline criará painéis |
-| **Lida por**   | `pipeline.py` (função `_identificar_gestores`)                     |
+| Atributo        | Valor                                                                    |
+| --------------- | ------------------------------------------------------------------------ |
+| **Obrigatória** | Sim                                                                      |
+| **Função**      | Mapeia cada líder de projeto às doações que ele lidera. Cada líder vira um painel. |
+| **Lida por**    | `datasources.py` (função `carregar_lideres_doacoes`)                     |
 
 #### Colunas necessárias
 
-| Coluna           | Tipo   | Descrição                                                                                                        |
-| ---------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
-| `RESPONSAVEL`    | Texto  | Nome da gestão da FAS a qual o relatório será destinado. Cada valor único gera um painel separado.                                            |
-| `SUPERINTENDÊNCIA` | Texto | Superintendência à qual a gestão pertence. Linhas onde `RESPONSAVEL` é igual a `SUPERINTENDÊNCIA` são **ignoradas** (filtro intencional para evitar que superintendências apareçam como gestões individuais). |
+| Coluna    | Tipo  | Descrição                                                                                              |
+| --------- | ----- | ----------------------------------------------------------------------------------------------------- |
+| `lider`   | Texto | Nome do líder de projeto. Cada líder distinto gera um painel separado (o nome vira o sufixo do painel). |
+| `doacao`  | Texto | Uma doação liderada por esse líder. Use **uma linha por doação** (o mesmo líder aparece em várias linhas). |
 
 #### Exemplo
 
-| RESPONSAVEL | SUPERINTENDÊNCIA | ... (outras colunas) |
-| ----------- | ---------------- | -------------------- |
-| GESTÃO A    | SUPER X          | ...                  |
-| GESTÃO B    | SUPER X          | ...                  |
-| SUPER X     | SUPER X          | ← ignorado          |
-| GFP         | SUPER Y          | ...                  |
-| KFW 01      | SUPER Z          | ...                  |
-| KFW 02      | SUPER Z          | ...                  |
+| lider          | doacao                    |
+| -------------- | ------------------------- |
+| Fabiana Cunha  | ARTERY PRODUCOES_2025_01  |
+| Fabiana Cunha  | SWAROVSKI_2025_01         |
+| Fabiana Cunha  | FUMCAD BERURI             |
+| Gabriela Sampaio | ABDI_2025_01            |
+| Gabriela Sampaio | AMAZONIA ANDES 2025_01  |
 
-#### Regra especial: consolidado GFP e KFW
+#### Regras e observações
 
-O pipeline detecta automaticamente gestões cujo nome começa com `KFW`. Quando
-existem gestões KFW:
-
-- A gestão `GFP` é **removida** da lista individual.
-- Um painel consolidado chamado **`GFP e KFW`** é adicionado, agrupando a `GFP` com todas as gestões `KFW*`.
-- Esse painel recebe um filtro múltiplo de `RESPONSAVEL` com todos esses nomes.
-
-#### Regra especial: painel da GRI com dados da superintendência SG
-
-O painel da `GRI` exibe dados de **todos os responsáveis cuja `SUPERINTENDÊNCIA` é `SG`**
-(`GRI`, `PDI`, `PPI` e `SG`), lidos dinamicamente da planilha. Excecao: a pagina
-**Pessoal** exibe apenas os dados da propria `GRI` (filtro de pagina adicional).
-
-- Nenhuma dessas gestoes perde seu painel individual.
-- A `SG` continua suprimida como painel individual (regra `RESPONSAVEL == SUPERINTENDENCIA`),
-  mas seus dados aparecem no painel da `GRI`.
-- Para alterar quais gestores compoe o consolidado da GRI, edite
-  `builder.clone_and_compile` (caso `elif gestao_name == "GRI"`).
+- Linhas com `lider` **ou** `doacao` em branco são **ignoradas**.
+- Doações repetidas para o mesmo líder são deduplicadas automaticamente.
+- Uma mesma doação pode aparecer para **mais de um líder** (ela entra no painel
+  de cada um). Não há restrição de unicidade.
+- Os nomes em `doacao` precisam corresponder aos valores da coluna `DOAÇÃO` do
+  modelo. O pipeline normaliza automaticamente (maiúsculas, sem espaços nas
+  pontas, sem caracteres de controle), mas diferenças de digitação no meio do
+  texto **não** são corrigidas. Sintoma típico de nome errado: o painel do líder
+  abre **vazio**. Confira os nomes de doação exatamente como aparecem no relatório.
 
 ---
 
@@ -228,31 +219,33 @@ O painel da `GRI` exibe dados de **todos os responsáveis cuja `SUPERINTENDÊNCI
 | Atributo       | Valor                                                                                     |
 | -------------- | ----------------------------------------------------------------------------------------- |
 | **Obrigatória** | Sim                                                                                       |
-| **Função**     | Define os horários de atualização automática (refresh) para o modelo semântico de cada gestão |
+| **Função**     | Define os horários de atualização automática (refresh) para o modelo semântico de cada líder |
 | **Lida por**   | `datasources.py` (função `carregar_schedule`)                                              |
 
 #### Colunas necessárias
 
 | Coluna     | Tipo  | Descrição                                                                                                                                      |
 | ---------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gestor`   | Texto | Nome da gestão, **exatamente como aparece** na coluna `RESPONSAVEL` de `gestao_areas.xlsx` (ou `GFP e KFW` para o consolidado).                 |
+| `lider`    | Texto | Nome do líder, **exatamente como aparece** na coluna `lider` de `lideres_projeto.xlsx`.                                                         |
 | `horarios` | Texto | Horários de refresh separados por vírgula, no formato `HH:MM`. Fuso: **SA Western Standard Time (UTC−4, Manaus)**. Se vazio, o agendamento é desativado. |
 
 #### Exemplo
 
-| gestor     | horarios          |
-| ---------- | ----------------- |
-| GESTÃO A   | 08:00,12:00,18:00 |
-| GESTÃO B   | 08:00,18:00       |
-| GFP e KFW  | 07:00,13:00       |
-| GESTÃO C   |                   |
+| lider            | horarios          |
+| ---------------- | ----------------- |
+| Fabiana Cunha    | 08:00,12:00,18:00 |
+| Gabriela Sampaio | 08:00,18:00       |
+| Rosa Anjos       | 07:00,13:00       |
+| Wildney Mourão   |                   |
 
 > **Notas:**
-> - Gestões que **não aparecem** nesta planilha recebem o horário padrão
+> - Líderes que **não aparecem** nesta planilha recebem o horário padrão
 >   `08:00, 18:00`.
-> - Gestões com a célula `horarios` **vazia** terão o agendamento
+> - Líderes com a célula `horarios` **vazia** terão o agendamento
 >   **desativado** (sem refresh automático).
 > - O agendamento roda **todos os dias da semana** (domingo a sábado).
+> - Para compatibilidade, o pipeline ainda aceita a coluna antiga `gestor` caso
+>   `lider` não exista na planilha.
 
 ---
 
@@ -370,7 +363,7 @@ O que o `run_deploy.bat` faz automaticamente:
 | Etapa 0 | Pré-requisitos         | Valida que todas as variáveis do `.env`, templates e planilhas estão presentes e garante que as pastas `build/`, `logs/` e `sql/` existam. |
 | Etapa 1 | Autenticação           | Obtém token OAuth2 do Azure AD usando o Service Principal (Client Credentials).                     |
 | Etapa 2 | Inspeção do workspace  | Lista todos os itens existentes no workspace Fabric para decidir se criará ou atualizará cada um.   |
-| Fase 1  | Modelos semânticos     | Clona o template, compila um modelo semântico por gestão e faz upload via Fabric Items API.         |
+| Fase 1  | Modelos semânticos     | Clona o template, compila um modelo semântico por líder e faz upload via Fabric Items API.           |
 | Fase 2  | Relatórios vinculados  | Ajusta a referência ao modelo semântico publicado e faz upload do relatório via Fabric Items API.   |
 | Fase 3  | Pós-deploy             | Executa TakeOver (posse do dataset pelo SPN), configura agendamento de refresh e dispara refresh inicial. |
 | Final   | Resumo e SQL           | Exibe tabela com resumo executivo, salva log JSON em `logs/` e gera SQL em `sql/` (se `user_dashboards.xlsx` existir). |
@@ -383,7 +376,7 @@ Após a execução, o pipeline produz:
 
 | Pasta    | Conteúdo                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------- |
-| `build/` | Artefatos compilados (uma pasta `.SemanticModel` e uma `.Report` por gestão). Pode ser ignorada pelo usuário, pois é intermediária. |
+| `build/` | Artefatos compilados (uma pasta `.SemanticModel` e uma `.Report` por líder). Pode ser ignorada pelo usuário, pois é intermediária. |
 | `logs/`  | Arquivo JSON por execução (`deploy_YYYYMMDD_HHMMSS.json`) com log detalhado de cada fase, tempos e erros. |
 | `sql/`   | `carga_user_dashboards.sql`: script SQL para carga de usuários no banco de dados (gerado apenas se `user_dashboards.xlsx` existir). |
 
@@ -406,27 +399,27 @@ vez de criar duplicatas. É seguro re-executar.
 **Sim.** O deploy é feito diretamente no workspace configurado em
 `WORKSPACE_ID`. Certifique-se de que é o workspace correto antes de executar.
 
-### Como adicionar uma nova gestão?
+### Como adicionar um novo líder?
 
-1. Adicione uma linha na planilha `data/gestao_areas.xlsx` com o nome da gestão na
-   coluna `RESPONSAVEL`.
-2. Opcionalmente, adicione a gestão em `data/refresh_schedule.xlsx` com os horários
+1. Adicione, em `data/lideres_projeto.xlsx`, uma linha por doação que o líder
+   lidera (coluna `lider` com o nome, coluna `doacao` com cada doação).
+2. Opcionalmente, adicione o líder em `data/refresh_schedule.xlsx` com os horários
    desejados (se não adicionar, usará `08:00, 18:00` como padrão).
 3. Execute `run_deploy.bat`.
 
-### Como remover uma gestão do pipeline?
+### Como remover um líder do pipeline?
 
-Remova a gestão de `data/gestao_areas.xlsx`. Na próxima execução, o pipeline
-simplesmente não processará aquela gestão. **O painel já publicado no workspace
-não é excluído automaticamente**; você precisará removê-lo manualmente pelo
-portal do Fabric/Power BI.
+Remova as linhas daquele líder em `data/lideres_projeto.xlsx`. Na próxima
+execução, o pipeline simplesmente não processará aquele líder. **O painel já
+publicado no workspace não é excluído automaticamente**; você precisará removê-lo
+manualmente pelo portal do Fabric/Power BI.
 
-### O que significa "GFP e KFW" no consolidado?
+### O painel de um líder abriu vazio. O que houve?
 
-Quando há gestões cujo nome começa com `KFW` na planilha, o pipeline
-automaticamente cria um painel consolidado chamado `GFP e KFW`, que filtra os
-dados por `GFP` + todas as gestões `KFW*`. Nesse caso, a gestão `GFP` não
-recebe painel individual, apenas o consolidado.
+Quase sempre é um nome de doação em `lideres_projeto.xlsx` que não corresponde
+exatamente à coluna `DOAÇÃO` do modelo. Confira o nome da doação como ele aparece
+no relatório e ajuste a planilha (o pipeline normaliza maiúsculas e espaços das
+pontas, mas não corrige diferenças de digitação no meio do texto).
 
 ### O que é o agendamento de refresh?
 
