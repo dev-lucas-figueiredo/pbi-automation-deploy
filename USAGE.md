@@ -187,23 +187,21 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
 
 | Coluna    | Tipo  | Descrição                                                                                              |
 | --------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| `lider`   | Texto | Nome do líder de projeto. Cada líder distinto gera um painel separado (o nome vira o sufixo do painel). |
-| `doacao`  | Texto | Uma doação liderada por esse líder. Use **uma linha por doação** (o mesmo líder aparece em várias linhas). |
+| `lider`   | Texto | Nome do líder de projeto. **Uma linha por líder** (não repita o líder em várias linhas). Cada líder distinto gera um painel separado (o nome vira o sufixo do painel). |
+| `doacao`  | Texto | Todas as doações lideradas por esse líder, **separadas por vírgula**, na mesma célula.                 |
 
 #### Exemplo
 
-| lider          | doacao                    |
-| -------------- | ------------------------- |
-| Fabiana Cunha  | ARTERY PRODUCOES_2025_01  |
-| Fabiana Cunha  | SWAROVSKI_2025_01         |
-| Fabiana Cunha  | FUMCAD BERURI             |
-| Gabriela Sampaio | ABDI_2025_01            |
-| Gabriela Sampaio | AMAZONIA ANDES 2025_01  |
+| lider             | doacao                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| Fabiana Cunha       | ARTERY PRODUCOES_2025_01, SWAROVSKI_2025_01, FUMCAD BERURI      |
+| Gabriela Sampaio    | ABDI_2025_01, AMAZONIA ANDES 2025_01                            |
+| Superintendência    | ABDI_2025_01, ARTERY PRODUCOES_2025_01, ... (todas as doações)  |
 
 #### Regras e observações
 
 - Linhas com `lider` **ou** `doacao` em branco são **ignoradas**.
-- Doações repetidas para o mesmo líder são deduplicadas automaticamente.
+- Doações repetidas na mesma célula (mesmo líder) são deduplicadas automaticamente.
 - Uma mesma doação pode aparecer para **mais de um líder** (ela entra no painel
   de cada um). Não há restrição de unicidade.
 - Os nomes em `doacao` precisam corresponder aos valores da coluna `DOAÇÃO` do
@@ -211,6 +209,18 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
   pontas, sem caracteres de controle), mas diferenças de digitação no meio do
   texto **não** são corrigidas. Sintoma típico de nome errado: o painel do líder
   abre **vazio**. Confira os nomes de doação exatamente como aparecem no relatório.
+
+#### Convenção: painel compartilhado por vários logins ("Superintendência")
+
+Quando um grupo de pessoas precisa enxergar exatamente as mesmas doações (ex.:
+superintendentes com acesso a tudo), não crie um líder por pessoa: crie **um
+único líder** representando o grupo (ex.: `Superintendência`) com a lista
+completa de doações. O pipeline publica **1 painel só** para esse grupo.
+
+O compartilhamento acontece em `user_dashboards.xlsx` (seção 5.3): depois de
+publicar o painel do grupo e obter a `url_painel`, cole a **mesma URL** nas
+linhas de cada pessoa do grupo. Cada pessoa mantém seu próprio usuário/senha,
+mas todas apontam para o mesmo painel.
 
 ---
 
@@ -401,8 +411,9 @@ vez de criar duplicatas. É seguro re-executar.
 
 ### Como adicionar um novo líder?
 
-1. Adicione, em `data/lideres_projeto.xlsx`, uma linha por doação que o líder
-   lidera (coluna `lider` com o nome, coluna `doacao` com cada doação).
+1. Adicione uma linha em `data/lideres_projeto.xlsx` com o nome do líder na
+   coluna `lider` e todas as doações dele, separadas por vírgula, na coluna
+   `doacao`.
 2. Opcionalmente, adicione o líder em `data/refresh_schedule.xlsx` com os horários
    desejados (se não adicionar, usará `08:00, 18:00` como padrão).
 3. Execute `run_deploy.bat`.

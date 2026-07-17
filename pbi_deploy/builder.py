@@ -31,7 +31,6 @@ def clone_and_compile(lider_name, doacoes):
     shutil.copytree(config.BASE_SEMANTIC_MODEL, target_semantic_folder)
     shutil.copytree(config.BASE_REPORT, target_report_folder)
 
-    # Substitui o filterConfig do report pelo filtro de doacoes deste lider.
     report_json_path = os.path.join(target_report_folder, "definition", "report.json")
     if os.path.exists(report_json_path):
         with open(report_json_path, "r", encoding="utf-8") as f:

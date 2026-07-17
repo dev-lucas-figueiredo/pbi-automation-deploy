@@ -32,9 +32,10 @@ def carregar_lideres_doacoes():
     """
     Le data/lideres_projeto.xlsx e retorna dict {lider: [doacoes]}.
 
-    Cada linha e um par (lider, doacao). Linhas com lider ou doacao vazios sao
-    ignoradas. As doacoes sao normalizadas para casar com dDoação.DOAÇÃO e
-    deduplicadas por lider preservando a ordem de leitura.
+    Uma linha por lider; a coluna doacao traz as doacoes separadas por
+    virgula. Linhas com lider ou doacao vazios sao ignoradas. As doacoes sao
+    normalizadas para casar com dDoação.DOAÇÃO e deduplicadas preservando a
+    ordem de leitura.
     """
     df = pd.read_excel(config.LIDERES_PROJETO_PATH, dtype=str)
 
@@ -45,14 +46,19 @@ def carregar_lideres_doacoes():
     lideres = {}
     for _, row in df.iterrows():
         lider = str(row.get("lider", "")).strip()
-        doacao = _normalizar_doacao(row.get("doacao", ""))
+        doacoes_raw = str(row.get("doacao", "")).strip()
         if not lider or lider.lower() == "nan":
             continue
-        if not doacao or doacao == "NAN":
+        if not doacoes_raw or doacoes_raw.lower() == "nan":
             continue
-        doacoes = lideres.setdefault(lider, [])
-        if doacao not in doacoes:
-            doacoes.append(doacao)
+
+        doacoes = []
+        for parte in doacoes_raw.split(","):
+            doacao = _normalizar_doacao(parte)
+            if doacao and doacao != "NAN" and doacao not in doacoes:
+                doacoes.append(doacao)
+        if doacoes:
+            lideres[lider] = doacoes
     return lideres
 
 

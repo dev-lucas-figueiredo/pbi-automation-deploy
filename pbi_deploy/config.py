@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- Credenciais e identificadores (lidos do .env) ---------------------------
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
@@ -21,25 +20,20 @@ URL_ENCRYPTION_KEY = os.getenv("URL_ENCRYPTION_KEY")
 DELEGATED_USER = os.getenv("DELEGATED_USER")
 DELEGATED_PASSWORD = os.getenv("DELEGATED_PASSWORD")
 
-# --- Identidade do projeto ---------------------------------------------------
 PBI_PROJECT_NAME = "Painel Financeiro Executivo"
 
-# --- Diretorios --------------------------------------------------------------
 TEMPLATE_DIR = "template"
 BUILD_DIR = "build"
 LOG_DIR = "logs"
 SQL_DIR = "sql"
 
-# --- Planilhas de entrada ----------------------------------------------------
 LIDERES_PROJETO_PATH = os.path.join("data", "lideres_projeto.xlsx")
 REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule.xlsx")
 USER_DASHBOARDS_PATH = os.path.join("data", "user_dashboards.xlsx")
 
-# --- Artefatos base do template ----------------------------------------------
 BASE_SEMANTIC_MODEL = os.path.join(TEMPLATE_DIR, f"{PBI_PROJECT_NAME}.SemanticModel")
 BASE_REPORT = os.path.join(TEMPLATE_DIR, f"{PBI_PROJECT_NAME}.Report")
 
-# --- Endpoints e autenticacao ------------------------------------------------
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}" if TENANT_ID else None
 SCOPE_PBI = ["https://analysis.windows.net/powerbi/api/.default"]
 SCOPE = SCOPE_PBI  # alias mantido para compatibilidade

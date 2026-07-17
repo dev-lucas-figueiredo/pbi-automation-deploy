@@ -106,6 +106,14 @@ das fases.
   vazio, o suspeito número um é um nome de doação digitado diferente do modelo.
 - Uma mesma doação pode aparecer para mais de um líder (aparece no painel de
   cada um). Isso é intencional, não há restrição de unicidade.
+- `lideres_projeto.xlsx` tem **uma linha por líder**; a coluna `doacao` traz
+  as doações separadas por vírgula na mesma célula (não uma linha por par).
+- Convenção de painel compartilhado: quando várias pessoas devem ver
+  exatamente as mesmas doações (ex.: superintendentes), a planilha usa **um
+  único líder representando o grupo** (ex.: `Superintendência`), não um líder
+  por pessoa. O compartilhamento do login acontece fora do pipeline, em
+  `user_dashboards.xlsx`: a mesma `url_painel` é colada nas linhas de cada
+  pessoa do grupo. Não "corrija" isso duplicando o líder por pessoa.
 - A tabela `dGestão` e a coluna `RESPONSAVEL` continuam no modelo (relações
   intactas), mas não são mais o eixo dos painéis. `gestao_areas.xlsx` foi
   aposentada como entrada do pipeline.

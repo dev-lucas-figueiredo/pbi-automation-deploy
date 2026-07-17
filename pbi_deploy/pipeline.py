@@ -65,7 +65,6 @@ def main():
 
     memoria_deploy = {}
 
-    # --- FASE 1: modelos semanticos ---
     def processar_modelo(lider):
         nome_final, pasta_model, pasta_report = clone_and_compile(lider, lideres[lider])
         status, dataset_id = upload_item_to_fabric(
@@ -86,7 +85,6 @@ def main():
         cor="bright_magenta",
     )
 
-    # Re-fetch para a Fase 2 capturar IDs novos
     console.print(
         "\n[dim]Aguardando 3s para propagacao de itens recem-criados...[/dim]"
     )
@@ -95,7 +93,6 @@ def main():
         token, titulo="ETAPA 3 / RE-SINCRONIZACAO WORKSPACE"
     )
 
-    # --- FASE 2: relatorios vinculados ---
     def processar_relatorio(lider):
         dados = memoria_deploy[lider]
         fix_report_cloud_reference(dados["pasta_report"], dados["dataset_id"])
@@ -113,7 +110,6 @@ def main():
         cor="bright_magenta",
     )
 
-    # --- FASE 3: pos-deploy (TakeOver + schedule + refresh inicial) ---
     banner(
         "FASE 3 / POS-DEPLOY",
         "TakeOver, credenciais SharePoint, agendamento e refresh inicial",
@@ -154,7 +150,6 @@ def main():
         "e rode o script novamente.[/dim]"
     )
 
-    # --- SUMARIO ---
     fim = datetime.now()
     duracao = (fim - inicio).total_seconds()
 
@@ -207,7 +202,6 @@ def main():
         )
     )
 
-    # Persistir log estruturado
     log_path = Path(config.LOG_DIR) / f"deploy_{inicio.strftime('%Y%m%d_%H%M%S')}.json"
     with open(log_path, "w", encoding="utf-8") as f:
         json.dump(
@@ -234,7 +228,6 @@ def main():
         )
     console.print(f"\n[dim]Log estruturado salvo em: {log_path}[/dim]\n")
 
-    # Gerar SQL de carga de user_dashboards se planilha existir
     if os.path.exists(config.USER_DASHBOARDS_PATH):
         try:
             gerar_sql_user_dashboards()

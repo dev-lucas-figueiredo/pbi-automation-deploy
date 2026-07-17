@@ -101,7 +101,6 @@ def poll_lro(token, location_url, max_attempts=20, wait_seconds=2):
         status = (body.get("status") or "").lower()
 
         if status in ("succeeded", "completed", "success"):
-            # Tenta extrair ID do resultado
             result_url = r.headers.get("Location") or body.get("resultUrl")
             if result_url and result_url != location_url:
                 try:
