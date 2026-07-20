@@ -1,5 +1,9 @@
 """Orquestracao do pipeline de publicacao Power BI / Fabric.
 
+Suporta dois modos, escolhidos pelo argumento de linha de comando:
+    gestao    1 painel por gestao (filtro dGestão.RESPONSAVEL).
+    lideres   1 painel por lider (filtro dDoação.DOAÇÃO).
+
 Encadeia as fases na ordem:
     Etapa 0  Pre-requisitos.
     Etapa 1  Autenticacao Azure AD.
@@ -18,6 +22,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -28,32 +33,64 @@ from .console import console, mask, banner
 from .auth import autenticar_azure
 from .fabric import listar_itens_workspace, upload_item_to_fabric
 from .powerbi import takeover_dataset, configurar_refresh_schedule, disparar_refresh
-from .builder import clone_and_compile, fix_report_cloud_reference
+from .builder import clone_and_compile_gestao, clone_and_compile_lider, fix_report_cloud_reference
 from .datasources import carregar_lideres_doacoes, carregar_schedule, gerar_sql_user_dashboards
 from .prerequisites import verificar_pre_requisitos
 from .runner import executar_fase
 
+MODOS = ("gestao", "lideres")
 
-def main():
-    inicio = datetime.now()
 
-    console.print(
-        Panel(
-            Text.assemble(
-                ("PIPELINE DE PUBLICACAO POWER BI\n", "bold white"),
-                (f"Projeto:   {config.PBI_PROJECT_NAME}\n", "white"),
-                (f"Workspace: {mask(config.WORKSPACE_ID)}\n", "dim"),
-                (f"Iniciado:  {inicio.strftime('%Y-%m-%d %H:%M:%S')}", "dim"),
-            ),
-            border_style="bold bright_green",
-            padding=(1, 4),
+def _identificar_gestores(df):
+    """Extrai a lista de gestores validos da planilha e monta o consolidado KFW.
+
+    Retorna (gestores, gestores_kfw, gestores_invalidos).
+    """
+    mask_invalidos = df["RESPONSAVEL"].fillna("") == df["SUPERINTENDÊNCIA"].fillna("")
+    gestores_invalidos = df[mask_invalidos]["RESPONSAVEL"].dropna().unique().tolist()
+    df_validos = df[~mask_invalidos]
+
+    gestores = df_validos["RESPONSAVEL"].dropna().unique().tolist()
+
+    gestores_kfw = [g for g in gestores if str(g).startswith("KFW")]
+    if gestores_kfw:
+        gestores = [g for g in gestores if g != "GFP"]
+        gestores.append("GFP e KFW")
+
+    return gestores, gestores_kfw, gestores_invalidos
+
+
+def _preparar_gestao():
+    """Le gestao_areas.xlsx e retorna (unidades, compilar, schedule_path, rotulo)."""
+    df = pd.read_excel(config.EXCEL_FILE_PATH)
+    gestores, gestores_kfw, gestores_invalidos = _identificar_gestores(df)
+
+    if gestores_invalidos:
+        console.print(
+            f"[dim]Ignorados por RESPONSAVEL == SUPERINTENDÊNCIA: {', '.join(gestores_invalidos)}[/dim]\n"
         )
+    console.print(
+        f"\n[bold cyan]Gestores identificados na planilha:[/bold cyan] {len(gestores) - (1 if gestores_kfw else 0)}"
     )
+    if gestores_kfw:
+        console.print(
+            f"[bold cyan]Painel consolidado GFP e KFW adicionado[/bold cyan] (agrupa GFP + {len(gestores_kfw)} gestões KFW)"
+        )
+    if "GRI" in gestores:
+        gestores_sg = df[df["SUPERINTENDÊNCIA"] == "SG"]["RESPONSAVEL"].unique().tolist()
+        console.print(
+            f"[bold cyan]Painel GRI ampliado:[/bold cyan] inclui todos os responsaveis da superintendencia SG "
+            f"({', '.join(gestores_sg)}) | pagina Pessoal restrita a GRI"
+        )
 
-    verificar_pre_requisitos()
-    token = autenticar_azure()
-    items_na_nuvem = listar_itens_workspace(token)
+    def compilar(gestor):
+        return clone_and_compile_gestao(gestor)
 
+    return gestores, compilar, config.REFRESH_SCHEDULE_PATH, "gestores"
+
+
+def _preparar_lideres():
+    """Le lideres_projeto.xlsx e retorna (unidades, compilar, schedule_path, rotulo)."""
     lideres = carregar_lideres_doacoes()
     lideres_lista = list(lideres.keys())
     total_doacoes = sum(len(v) for v in lideres.values())
@@ -63,14 +100,47 @@ def main():
         f"([dim]{total_doacoes} doacoes mapeadas[/dim])"
     )
 
+    def compilar(lider):
+        return clone_and_compile_lider(lider, lideres[lider])
+
+    return lideres_lista, compilar, config.LIDERES_REFRESH_SCHEDULE_PATH, "lideres"
+
+
+def main(mode):
+    inicio = datetime.now()
+    rotulo_modo = "GESTÃO (RESPONSAVEL)" if mode == "gestao" else "LÍDERES (DOAÇÃO)"
+
+    console.print(
+        Panel(
+            Text.assemble(
+                ("PIPELINE DE PUBLICACAO POWER BI\n", "bold white"),
+                (f"Modo:      {rotulo_modo}\n", "bold cyan"),
+                (f"Projeto:   {config.PBI_PROJECT_NAME}\n", "white"),
+                (f"Workspace: {mask(config.WORKSPACE_ID)}\n", "dim"),
+                (f"Iniciado:  {inicio.strftime('%Y-%m-%d %H:%M:%S')}", "dim"),
+            ),
+            border_style="bold bright_green",
+            padding=(1, 4),
+        )
+    )
+
+    verificar_pre_requisitos(mode)
+    token = autenticar_azure()
+    items_na_nuvem = listar_itens_workspace(token)
+
+    if mode == "gestao":
+        unidades, compilar, schedule_path, rotulo = _preparar_gestao()
+    else:
+        unidades, compilar, schedule_path, rotulo = _preparar_lideres()
+
     memoria_deploy = {}
 
-    def processar_modelo(lider):
-        nome_final, pasta_model, pasta_report = clone_and_compile(lider, lideres[lider])
+    def processar_modelo(unidade):
+        nome_final, pasta_model, pasta_report = compilar(unidade)
         status, dataset_id = upload_item_to_fabric(
             token, nome_final, "SemanticModel", pasta_model, items_na_nuvem
         )
-        memoria_deploy[lider] = {
+        memoria_deploy[unidade] = {
             "nome_final": nome_final,
             "pasta_report": pasta_report,
             "dataset_id": dataset_id,
@@ -79,8 +149,8 @@ def main():
 
     log_fase1 = executar_fase(
         "FASE 1 / MODELOS SEMANTICOS",
-        f"Compilacao e deploy de {len(lideres_lista)} modelos",
-        lideres_lista,
+        f"Compilacao e deploy de {len(unidades)} modelos",
+        unidades,
         processar_modelo,
         cor="bright_magenta",
     )
@@ -93,19 +163,19 @@ def main():
         token, titulo="ETAPA 3 / RE-SINCRONIZACAO WORKSPACE"
     )
 
-    def processar_relatorio(lider):
-        dados = memoria_deploy[lider]
+    def processar_relatorio(unidade):
+        dados = memoria_deploy[unidade]
         fix_report_cloud_reference(dados["pasta_report"], dados["dataset_id"])
         status, item_id = upload_item_to_fabric(
             token, dados["nome_final"], "Report", dados["pasta_report"], items_atualizados
         )
         return status, f"report_id={mask(item_id) if item_id else 'LRO'}"
 
-    lideres_fase2 = list(memoria_deploy.keys())
+    unidades_fase2 = list(memoria_deploy.keys())
     log_fase2 = executar_fase(
         "FASE 2 / RELATORIOS VINCULADOS",
-        f"Deploy de {len(lideres_fase2)} relatorios",
-        lideres_fase2,
+        f"Deploy de {len(unidades_fase2)} relatorios",
+        unidades_fase2,
         processar_relatorio,
         cor="bright_magenta",
     )
@@ -116,15 +186,18 @@ def main():
         cor="bright_magenta",
     )
 
-    schedule_map = carregar_schedule()
-    console.print(f"  Agendamentos carregados de [cyan]refresh_schedule.xlsx[/cyan]: {len(schedule_map)} lideres\n")
+    schedule_map = carregar_schedule(schedule_path)
+    console.print(
+        f"  Agendamentos carregados de [cyan]{os.path.basename(schedule_path)}[/cyan]: "
+        f"{len(schedule_map)} {rotulo}\n"
+    )
 
-    def processar_pos_deploy(lider):
-        dataset_id = memoria_deploy[lider]["dataset_id"]
+    def processar_pos_deploy(unidade):
+        dataset_id = memoria_deploy[unidade]["dataset_id"]
         if not dataset_id:
             raise Exception("dataset_id ausente")
 
-        horarios = schedule_map.get(lider, ["08:00", "18:00"])
+        horarios = schedule_map.get(unidade, ["08:00", "18:00"])
 
         takeover_dataset(token, dataset_id)
         configurar_refresh_schedule(token, dataset_id, horarios)
@@ -133,11 +206,11 @@ def main():
         schedule_str = ",".join(horarios) if horarios else "desativado"
         return "Configurado", f"schedule={schedule_str} | refresh enfileirado"
 
-    lideres_fase3 = list(memoria_deploy.keys())
+    unidades_fase3 = list(memoria_deploy.keys())
     log_fase3 = executar_fase(
         "FASE 3 / POS-DEPLOY",
-        f"Configurando {len(lideres_fase3)} modelos",
-        lideres_fase3,
+        f"Configurando {len(unidades_fase3)} modelos",
+        unidades_fase3,
         processar_pos_deploy,
         cor="bright_magenta",
     )
@@ -145,9 +218,9 @@ def main():
     f3 = len(log_fase3) - s3
 
     console.print(
-        "[dim]Refresh enfileirado. Os dados sao carregados em background "
-        "e podem levar alguns minutos. Para alterar horarios, edite data/refresh_schedule.xlsx "
-        "e rode o script novamente.[/dim]"
+        f"[dim]Refresh enfileirado. Os dados sao carregados em background "
+        f"e podem levar alguns minutos. Para alterar horarios, edite {schedule_path} "
+        f"e rode o script novamente.[/dim]"
     )
 
     fim = datetime.now()
@@ -202,10 +275,11 @@ def main():
         )
     )
 
-    log_path = Path(config.LOG_DIR) / f"deploy_{inicio.strftime('%Y%m%d_%H%M%S')}.json"
+    log_path = Path(config.LOG_DIR) / f"deploy_{mode}_{inicio.strftime('%Y%m%d_%H%M%S')}.json"
     with open(log_path, "w", encoding="utf-8") as f:
         json.dump(
             {
+                "modo": mode,
                 "inicio": inicio.isoformat(),
                 "fim": fim.isoformat(),
                 "duracao_s": round(duracao, 2),
@@ -237,10 +311,16 @@ def main():
     sys.exit(0 if (f1 + f2 + f3) == 0 else 1)
 
 
-def run():
+def run(mode):
     """Wrapper com tratamento de erros e codigos de saida usado pelo entrypoint."""
+    if mode not in MODOS:
+        console.print(
+            "[red bold]Modo invalido ou ausente.[/red bold] "
+            "Uso: python -m pbi_deploy.main <gestao|lideres>"
+        )
+        sys.exit(2)
     try:
-        main()
+        main(mode)
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrompido pelo usuario.[/yellow]\n")
         sys.exit(130)

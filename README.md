@@ -1,8 +1,13 @@
 # Pipeline de Publicação: Painel Financeiro Executivo
 
-Automação que clona um template Power BI (`.pbip`), gera um painel por líder de
-projeto (filtrado pelas doações que ele lidera) e publica tudo no Microsoft
-Fabric, configurando agendamento e disparo de refresh.
+Automação que clona um template Power BI (`.pbip`), gera um painel por unidade e
+publica tudo no Microsoft Fabric, configurando agendamento e disparo de refresh.
+Há **dois modos**, cada um com seu `.bat`:
+
+- **Gestão** (`run_deploy_gestao.bat`): 1 painel por gestão, filtrado por
+  `RESPONSAVEL` (com consolidados GFP+KFW e GRI/SG).
+- **Líderes** (`run_deploy_lideres.bat`): 1 painel por líder de projeto, filtrado
+  pelas doações que aquele líder lidera.
 
 > **Novo aqui?** Leia o [USAGE.md](USAGE.md), um guia completo de como preparar
 > os arquivos e executar o pipeline.
@@ -11,7 +16,9 @@ Fabric, configurando agendamento e disparo de refresh.
 
 ## Para o usuário final
 
-Basta dar **duplo clique** em **`run_deploy.bat`**. Detalhes completos sobre
+Dê **duplo clique** no `.bat` do modo desejado: **`run_deploy_gestao.bat`** (por
+gestão) ou **`run_deploy_lideres.bat`** (por líder de projeto). Os dois podem ser
+executados no mesmo workspace (os nomes dos painéis não colidem). Detalhes de
 preparação de arquivos, planilhas e template estão no [USAGE.md](USAGE.md).
 
 ---
@@ -36,21 +43,25 @@ DELEGATED_PASSWORD=...
 
 ## Planilhas de entrada (`data/`)
 
-| Arquivo                  | Obrigatório | Função                                                          |
-| ------------------------ | :---------: | -------------------------------------------------------------- |
-| `lideres_projeto.xlsx`   |     Sim     | Mapeamento líder -> doação (`lider`, `doacao`). Define os painéis. |
-| `refresh_schedule.xlsx`  |     Sim     | Horários de refresh por líder (`lider`, `horarios`).           |
-| `user_dashboards.xlsx`   |     Não     | Gera `sql/carga_user_dashboards.sql` (usuário, senha, URL).    |
+| Arquivo                         | Modo    | Obrigatório | Função                                                             |
+| ------------------------------- | ------- | :---------: | ----------------------------------------------------------------- |
+| `gestao_areas.xlsx`             | gestão  |     Sim     | Lista de gestões (`RESPONSAVEL`, `SUPERINTENDÊNCIA`).              |
+| `refresh_schedule.xlsx`         | gestão  |     Sim     | Horários de refresh por gestão (`gestor`, `horarios`).            |
+| `lideres_projeto.xlsx`          | líderes |     Sim     | Mapeamento líder -> doações (`lider`, `email`, `doacao`).          |
+| `refresh_schedule_lideres.xlsx` | líderes |     Sim     | Horários de refresh por líder (`lider`, `horarios`).              |
+| `user_dashboards.xlsx`          | ambos   |     Não     | Gera `sql/carga_user_dashboards.sql` (usuário, senha, URL).       |
 
-> Colunas obrigatórias, exemplos e regras especiais: ver [USAGE.md § 5](USAGE.md#5-planilhas-de-entrada-pasta-data).
+> Cada modo só exige as planilhas do seu par. Colunas obrigatórias, exemplos e
+> regras especiais: ver [USAGE.md § 5](USAGE.md#5-planilhas-de-entrada-pasta-data).
 
 ---
 
 ## O que o pipeline faz
 
-1. **Etapas 0 a 2 (preparação):** valida `.env`/templates/planilhas, autentica no
-   Azure AD (Service Principal) e inspeciona os itens do workspace.
-2. **Fase 1 (Modelos semânticos):** clona o template e publica um modelo por líder.
+1. **Etapas 0 a 2 (preparação):** valida `.env`/templates/planilhas (conforme o
+   modo), autentica no Azure AD (Service Principal) e inspeciona os itens do workspace.
+2. **Fase 1 (Modelos semânticos):** clona o template e publica um modelo por unidade
+   (gestão ou líder).
 3. **Fase 2 (Relatórios):** publica os relatórios vinculados ao modelo correspondente.
 4. **Fase 3 (Pós-deploy):** TakeOver, agendamento e disparo do refresh inicial.
 
@@ -61,29 +72,30 @@ fase a fase em [USAGE.md § 8](USAGE.md#8-o-que-acontece-em-cada-etapa).
 
 ## Arquitetura do código
 
-A lógica é um pacote modular. O `.bat` chama `pbi_deploy/main.py` (via
-`python -m pbi_deploy.main`), que apenas delega para o orquestrador. Cada
-módulo tem uma responsabilidade única, um desenho pensado para manutenção,
-inclusive por agentes de IA. Detalhes de convenções para agentes estão em
-[AGENTS.md](AGENTS.md).
+A lógica é um pacote modular. Cada `.bat` chama `pbi_deploy/main.py` (via
+`python -m pbi_deploy.main <gestao|lideres>`), que apenas delega para o
+orquestrador. Cada módulo tem uma responsabilidade única, um desenho pensado
+para manutenção, inclusive por agentes de IA. Detalhes de convenções para
+agentes estão em [AGENTS.md](AGENTS.md).
 
 ```
-run_deploy.bat            Entrada do usuário final (ativa venv + roda o pipeline).
+run_deploy_gestao.bat     Entrada do usuário final (modo gestão).
+run_deploy_lideres.bat    Entrada do usuário final (modo líderes).
 
 pbi_deploy/
 ├── __init__.py           Documentação do pacote e atalho main().
-├── main.py               Entrypoint fino: delega para pbi_deploy.pipeline.run.
+├── main.py               Entrypoint fino: lê o modo do argv e delega para pipeline.run.
 ├── config.py             Variáveis de ambiente, caminhos e constantes.
 ├── console.py            Console rich compartilhado, mask() e banner().
 ├── errors.py             APIError e parsing seguro de respostas.
 ├── auth.py               Autenticação Azure AD (Service Principal e delegado).
 ├── fabric.py             Fabric Items API: listar, criar/atualizar, poll LRO.
 ├── powerbi.py            Power BI REST: TakeOver, schedule, refresh, SharePoint.
-├── builder.py            Clonagem/compilação dos artefatos .pbip por líder.
+├── builder.py            Clonagem/compilação dos artefatos .pbip (por gestão ou por líder).
 ├── datasources.py        Leitura das planilhas e geração de SQL.
-├── prerequisites.py      Validação de pré-requisitos (Etapa 0).
+├── prerequisites.py      Validação de pré-requisitos por modo (Etapa 0).
 ├── runner.py             Executor genérico de uma fase (progresso + tabela).
-└── pipeline.py           Orquestração das fases (main / run).
+└── pipeline.py           Orquestração das fases (main(mode) / run(mode)).
 ```
 
 ### Fluxo de dependências
@@ -105,14 +117,18 @@ para uma nova fase, use `runner.executar_fase` dentro de `pipeline.py`.
 ```bat
 env\Scripts\activate
 pip install -r requirements.txt
-python -m pbi_deploy.main
+python -m pbi_deploy.main gestao
+python -m pbi_deploy.main lideres
 ```
+
+> Sem argumento (ou com um modo inválido), o pipeline só imprime o uso e sai
+> com código 2, sem tocar a API.
 
 ## Códigos de saída
 
-| Código | Significado                          |
-| :----: | ------------------------------------ |
-| `0`    | Sucesso (todas as fases sem falha).  |
-| `1`    | Concluído com falhas em alguma fase. |
-| `2`    | Erro fatal não tratado.              |
-| `130`  | Interrompido pelo usuário (Ctrl+C).  |
+| Código | Significado                                        |
+| :----: | -------------------------------------------------- |
+| `0`    | Sucesso (todas as fases sem falha).                |
+| `1`    | Concluído com falhas em alguma fase.               |
+| `2`    | Erro fatal não tratado ou modo inválido/ausente.   |
+| `130`  | Interrompido pelo usuário (Ctrl+C).                |

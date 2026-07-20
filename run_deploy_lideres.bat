@@ -1,11 +1,12 @@
 @echo off
 setlocal enabledelayedexpansion
-title Pipeline Power BI - Deploy
+title Pipeline Power BI - Deploy (LIDERES)
 chcp 65001 >nul
 
 echo.
 echo =====================================================
-echo  PIPELINE DE PUBLICACAO POWER BI
+echo  PIPELINE DE PUBLICACAO POWER BI - MODO LIDERES
+echo  (1 painel por lider / doacoes do lider)
 echo =====================================================
 echo.
 
@@ -66,10 +67,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM ---- 7. Executar pipeline ----
-echo [4/4] Executando pipeline...
+REM ---- 7. Executar pipeline (modo lideres) ----
+echo [4/4] Executando pipeline (modo LIDERES)...
 echo.
-python -m pbi_deploy.main
+python -m pbi_deploy.main lideres
 set EXIT_CODE=%errorlevel%
 
 echo.

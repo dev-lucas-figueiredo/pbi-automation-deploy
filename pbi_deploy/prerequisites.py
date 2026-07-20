@@ -11,8 +11,11 @@ from . import config
 from .console import console, mask, banner
 
 
-def verificar_pre_requisitos():
-    """Valida credenciais, templates e planilhas; aborta se algo essencial faltar."""
+def verificar_pre_requisitos(mode):
+    """Valida credenciais, templates e planilhas; aborta se algo essencial faltar.
+
+    `mode` ("gestao" ou "lideres") decide quais planilhas de entrada sao exigidas.
+    """
     banner(
         "ETAPA 0 / PRE-REQUISITOS",
         "Validacao de credenciais, templates e planilha",
@@ -43,9 +46,17 @@ def verificar_pre_requisitos():
     caminhos = [
         (config.BASE_SEMANTIC_MODEL, "Template SemanticModel"),
         (config.BASE_REPORT, "Template Report"),
-        (config.LIDERES_PROJETO_PATH, "Planilha de lideres/doacoes"),
-        (config.REFRESH_SCHEDULE_PATH, "Planilha de agendamento"),
     ]
+    if mode == "gestao":
+        caminhos += [
+            (config.EXCEL_FILE_PATH, "Planilha de gestores"),
+            (config.REFRESH_SCHEDULE_PATH, "Planilha de agendamento"),
+        ]
+    else:
+        caminhos += [
+            (config.LIDERES_PROJETO_PATH, "Planilha de lideres/doacoes"),
+            (config.LIDERES_REFRESH_SCHEDULE_PATH, "Planilha de agendamento"),
+        ]
     for caminho, label in caminhos:
         if os.path.exists(caminho):
             tabela.add_row(label, "[green]OK[/green]", caminho)

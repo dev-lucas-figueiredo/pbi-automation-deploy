@@ -6,10 +6,17 @@ Cursor etc.) que for editar este repositório. Leia antes de propor mudanças.
 ## O que é este projeto
 
 Pipeline de publicação Power BI / Microsoft Fabric. Clona um template `.pbip`,
-gera um modelo semântico + relatório por líder de projeto (cada painel filtrado
-pelas doações que aquele líder lidera), publica no Fabric e configura
-agendamento/refresh. Usuário final só executa `run_deploy.bat`, sem CLI, sem
-parâmetros, nem passos manuais.
+gera um modelo semântico + relatório por unidade, publica no Fabric e configura
+agendamento/refresh. Há **dois modos**, cada um com seu `.bat`:
+
+- **gestao** (`run_deploy_gestao.bat`): 1 painel por gestão, filtro
+  `dGestão.RESPONSAVEL` (com casos especiais GFP+KFW e GRI/SG). Fonte:
+  `data/gestao_areas.xlsx`.
+- **lideres** (`run_deploy_lideres.bat`): 1 painel por líder de projeto, filtro
+  `dDoação.DOAÇÃO` com as doações daquele líder. Fonte: `data/lideres_projeto.xlsx`.
+
+O modo é passado como argumento (`python -m pbi_deploy.main <gestao|lideres>`);
+o usuário final só dá duplo clique no `.bat` do modo desejado, sem CLI.
 
 Visão geral e arquitetura estão no [README.md](README.md); detalhes de uso
 (planilhas, `.env`, fases do pipeline) estão no [USAGE.md](USAGE.md). Este
@@ -26,6 +33,10 @@ a menos que o usuário peça explicitamente. Para validar alterações, prefira:
 env\Scripts\python.exe -c "import ast; ast.parse(open('pbi_deploy/arquivo.py', encoding='utf-8').read())"
 env\Scripts\python.exe -c "import pbi_deploy.main"
 ```
+
+Rodar `python -m pbi_deploy.main` sem argumento (ou com modo inválido) só imprime
+o uso e sai com código 2, sem tocar a API, então é seguro para checar o parse dos
+argumentos.
 
 Isso garante sintaxe e imports corretos sem tocar a API real. Não existe
 suíte de testes automatizados neste projeto. Não invente uma sem alinhar
@@ -44,11 +55,11 @@ pbi_deploy/
 ├── auth.py              Azure AD: token de app (SPN) e token delegado (ROPC).
 ├── fabric.py             Fabric Items API: listar itens, build payload, criar/atualizar, poll_lro.
 ├── powerbi.py            Power BI REST: TakeOver, credenciais SharePoint, refresh schedule/trigger.
-├── builder.py            Clona template -> build/, injeta filtro de doações do líder, fixa referência do dataset.
+├── builder.py            Clona template -> build/, injeta filtro (gestão ou líder), fixa referência do dataset.
 ├── datasources.py        Lê planilhas (líderes/doações, schedule) e gera sql/carga_user_dashboards.sql.
-├── prerequisites.py      Etapa 0: valida .env, templates, planilhas, cria pastas.
+├── prerequisites.py      Etapa 0: valida .env, templates, planilhas (por modo), cria pastas.
 ├── runner.py             executar_fase(): loop genérico com progress bar + tabela + log por item.
-└── pipeline.py           Orquestra as fases em main()/run(); único módulo que conhece a ordem completa.
+└── pipeline.py           Orquestra as fases em main(mode)/run(mode); conhece a ordem completa e os dois modos.
 ```
 
 Regra de dependência: `config`, `console` e `errors` são a camada base e
@@ -61,10 +72,15 @@ das fases.
 
 - **Nova chamada à Fabric Items API** → `fabric.py`.
 - **Nova chamada à Power BI REST API** (datasets, refresh, gateways) → `powerbi.py`.
-- **Mudança na regra de geração do relatório por líder** (filtro de doações) →
-  `builder.py` (`clone_and_compile` e `_montar_filtro_doacao`).
+- **Mudança na regra do relatório por gestão** (filtro RESPONSAVEL, casos GFP+KFW
+  e GRI/SG) → `builder.py` (`clone_and_compile_gestao`, `_injetar_filtro_pessoal_gri`)
+  e `pipeline._identificar_gestores`.
+- **Mudança na regra do relatório por líder** (filtro de doações) →
+  `builder.py` (`clone_and_compile_lider` e `_montar_filtro_doacao`).
 - **Mudança na leitura do mapeamento líder → doação** → `datasources.py`
   (`carregar_lideres_doacoes` e `_normalizar_doacao`).
+- **Novo modo do pipeline** → adicione um `_preparar_<modo>()` em `pipeline.py`
+  que devolve `(unidades, compilar, schedule_path, rotulo)` e ligue-o em `main`.
 - **Nova fase no pipeline** → defina a função `processar_um` em `pipeline.py`
   e chame `runner.executar_fase(...)`; não duplique a lógica de
   progresso/tabela/log que já existe em `runner.py`.
@@ -95,25 +111,46 @@ das fases.
   existem mas **não são chamados** no fluxo principal de `pipeline.py` (a
   configuração de credenciais SharePoint é feita fora deste script hoje). Não
   remova sem confirmar com o usuário, pois pode ser um próximo passo planejado.
-- O eixo de segmentação é o **líder de projeto**: `pipeline.main` itera sobre os
-  líderes de `lideres_projeto.xlsx` e cada painel recebe um filtro report-level
-  `dDoação.DOAÇÃO IN (doações do líder)`. `clone_and_compile` **substitui** todo o
-  `filterConfig` do report por esse filtro; o template não precisa carregar
-  nenhum filtro placeholder.
+### Comuns aos dois modos
+
+- Cada modo tem seu par (planilha de entrada + planilha de agendamento):
+  gestao usa `gestao_areas.xlsx` + `refresh_schedule.xlsx`; lideres usa
+  `lideres_projeto.xlsx` + `refresh_schedule_lideres.xlsx`. `carregar_schedule(path)`
+  recebe o caminho por parâmetro e aceita coluna `gestor` ou `lider`.
+- Os dois modos publicam no **mesmo** `WORKSPACE_ID`. Não há colisão porque os
+  nomes de item diferem (`... - GRI` vs `... - Fabiana Cunha`). Rodar os dois
+  cria os dois conjuntos de painéis lado a lado no workspace.
+- Só `pipeline._preparar_gestao`/`_preparar_lideres` conhecem a especificidade do
+  modo; o resto de `main(mode)` é genérico (itera `unidades`, chama `compilar`).
+
+### Modo gestão (RESPONSAVEL)
+
+- O consolidado `"GFP e KFW"` é um caso especial em `builder.clone_and_compile_gestao`
+  e em `pipeline._identificar_gestores`: agrupa `GFP` com todos os gestores cujo
+  nome começa com `KFW`. Qualquer mudança na regra precisa refletir nos dois lugares.
+- O painel da `GRI` inclui no filtro report-level todos os `RESPONSAVEL` cuja
+  `SUPERINTENDÊNCIA == 'SG'` (`GRI`, `PDI`, `PPI`, `SG`), lidos da planilha; e a
+  página `Pessoal` recebe um filtro page-level `RESPONSAVEL = 'GRI'`
+  (`_injetar_filtro_pessoal_gri`), mantendo os dados de RH só da própria GRI.
+- `gestao_areas.xlsx` ignora linhas onde `RESPONSAVEL == SUPERINTENDÊNCIA`
+  (filtro intencional). `SG` é suprimida como painel individual, mas seus dados
+  aparecem no painel consolidado da `GRI`.
+- O modo gestão depende de o template ter um filtro report-level placeholder em
+  `dGestão.RESPONSAVEL` (o builder localiza esse filtro e injeta os valores).
+
+### Modo líderes (DOAÇÃO)
+
+- `clone_and_compile_lider` **substitui** todo o `filterConfig` do report por um
+  filtro `dDoação.DOAÇÃO IN (doações do líder)`; não depende de placeholder.
 - Os nomes de doação do mapeamento precisam casar com a coluna `dDoação.DOAÇÃO`
-  do modelo, que é normalizada com `Text.Upper(Text.Trim(Text.Clean(...)))`.
-  `datasources._normalizar_doacao` replica essa regra; se um painel de líder vier
-  vazio, o suspeito número um é um nome de doação digitado diferente do modelo.
+  do modelo, normalizada com `Text.Upper(Text.Trim(Text.Clean(...)))`.
+  `datasources._normalizar_doacao` replica essa regra; painel de líder vazio é
+  quase sempre nome de doação digitado diferente do modelo.
 - Uma mesma doação pode aparecer para mais de um líder (aparece no painel de
-  cada um). Isso é intencional, não há restrição de unicidade.
-- `lideres_projeto.xlsx` tem **uma linha por líder**; a coluna `doacao` traz
-  as doações separadas por vírgula na mesma célula (não uma linha por par).
-- Pessoas com acesso irrestrito (ex.: superintendentes) **não entram** em
-  `lideres_projeto.xlsx`. Elas usam o painel mestre publicado direto da pasta
-  `template/` (sem filtro de doação), fora do loop deste pipeline. O
-  compartilhamento do login acontece em `user_dashboards.xlsx`: a mesma
-  `url_painel` do painel mestre é colada nas linhas de cada pessoa com esse
-  acesso. Não crie um líder artificial para representar esse grupo.
-- A tabela `dGestão` e a coluna `RESPONSAVEL` continuam no modelo (relações
-  intactas), mas não são mais o eixo dos painéis. `gestao_areas.xlsx` foi
-  aposentada como entrada do pipeline.
+  cada um). Intencional, sem restrição de unicidade.
+- `lideres_projeto.xlsx` tem **uma linha por líder**; a coluna `doacao` traz as
+  doações separadas por vírgula (a coluna `email` é só referência, não é lida
+  pelo pipeline).
+- Acesso irrestrito (ex.: superintendentes) **não entra** em `lideres_projeto.xlsx`:
+  usa o painel mestre publicado direto da pasta `template/` (sem filtro), e o
+  login é compartilhado em `user_dashboards.xlsx` colando a mesma `url_painel`.

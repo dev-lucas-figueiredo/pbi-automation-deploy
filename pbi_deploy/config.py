@@ -27,8 +27,14 @@ BUILD_DIR = "build"
 LOG_DIR = "logs"
 SQL_DIR = "sql"
 
-LIDERES_PROJETO_PATH = os.path.join("data", "lideres_projeto.xlsx")
+# Modo gestao: painel por RESPONSAVEL (dGestão).
+EXCEL_FILE_PATH = os.path.join("data", "gestao_areas.xlsx")
 REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule.xlsx")
+
+# Modo lideres: painel por doacoes do lider (dDoação).
+LIDERES_PROJETO_PATH = os.path.join("data", "lideres_projeto.xlsx")
+LIDERES_REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule_lideres.xlsx")
+
 USER_DASHBOARDS_PATH = os.path.join("data", "user_dashboards.xlsx")
 
 BASE_SEMANTIC_MODEL = os.path.join(TEMPLATE_DIR, f"{PBI_PROJECT_NAME}.SemanticModel")

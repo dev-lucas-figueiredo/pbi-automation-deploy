@@ -62,14 +62,14 @@ def carregar_lideres_doacoes():
     return lideres
 
 
-def carregar_schedule():
+def carregar_schedule(path=config.REFRESH_SCHEDULE_PATH):
     """
-    Le refresh_schedule.xlsx e retorna dict {lider: [horarios]}.
-    Lideres com celula 'horarios' vazia sao ignorados (sem agendamento).
-    Fallback para horarios padrao se o lider nao estiver na planilha.
-    Aceita a coluna nova 'lider' ou a antiga 'gestor' (compatibilidade).
+    Le a planilha de agendamento e retorna dict {chave: [horarios]}.
+    A chave e o gestor (modo gestao) ou o lider (modo lideres); a funcao aceita
+    as duas colunas ('gestor' ou 'lider'). Celula 'horarios' vazia = sem
+    agendamento automatico; chaves ausentes usam o padrao do chamador.
     """
-    df = pd.read_excel(config.REFRESH_SCHEDULE_PATH, dtype=str)
+    df = pd.read_excel(path, dtype=str)
     coluna_chave = "lider" if "lider" in df.columns else "gestor"
     schedule = {}
     for _, row in df.iterrows():
