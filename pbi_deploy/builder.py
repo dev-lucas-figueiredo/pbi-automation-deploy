@@ -17,6 +17,18 @@ import pandas as pd
 from . import config
 
 
+def _literal(valor):
+    """Monta um literal de texto da query semantica ('valor').
+
+    Apostrofos internos precisam ser duplicados, senao fecham o literal antes da
+    hora e o Power BI rejeita a query com
+    InvalidOrMalformedSemanticQueryDefinition_InvalidLiteralExpression
+    (ex.: a doacao "FUNDO L'ORÉAL_2024_1").
+    """
+    escapado = str(valor).replace("'", "''")
+    return {"Literal": {"Value": f"'{escapado}'"}}
+
+
 def clone_and_compile_gestao(gestao_name):
     """Clona o template para a gestao e injeta o filtro de RESPONSAVEL no report."""
     new_filename = f"{config.PBI_PROJECT_NAME} - {gestao_name}"
@@ -53,13 +65,13 @@ def clone_and_compile_gestao(gestao_name):
                     df = pd.read_excel(config.EXCEL_FILE_PATH)
                     gestores_kfw = df[df["RESPONSAVEL"].str.startswith("KFW", na=False)]["RESPONSAVEL"].unique().tolist()
                     valores_consolidado = ["GFP"] + gestores_kfw
-                    values = [[{"Literal": {"Value": f"'{g}'"}}] for g in valores_consolidado]
+                    values = [[_literal(g)] for g in valores_consolidado]
                 elif gestao_name == "GRI":
                     df = pd.read_excel(config.EXCEL_FILE_PATH)
                     gestores_sg = df[df["SUPERINTENDÊNCIA"] == "SG"]["RESPONSAVEL"].unique().tolist()
-                    values = [[{"Literal": {"Value": f"'{g}'"}}] for g in gestores_sg]
+                    values = [[_literal(g)] for g in gestores_sg]
                 else:
-                    values = [[{"Literal": {"Value": f"'{gestao_name}'"}}]]
+                    values = [[_literal(gestao_name)]]
 
                 filtro["filter"] = {
                     "Version": 2,
@@ -200,7 +212,7 @@ def clone_and_compile_lider(lider_name, doacoes):
 
 def _montar_filtro_doacao(doacoes):
     """Monta o filtro report-level dDoação.DOAÇÃO IN (doacoes)."""
-    values = [[{"Literal": {"Value": f"'{d}'"}}] for d in doacoes]
+    values = [[_literal(d)] for d in doacoes]
     return {
         "name": "filtro_doacao_lider",
         "field": {
