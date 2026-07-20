@@ -21,7 +21,8 @@ pipeline. Para uma visão geral do projeto e da arquitetura, consulte o
 7. [Execução do pipeline](#7-execução-do-pipeline)
 8. [O que acontece em cada etapa](#8-o-que-acontece-em-cada-etapa)
 9. [Saídas geradas](#9-saídas-geradas)
-10. [Perguntas frequentes](#10-perguntas-frequentes)
+10. [Passo obrigatório após a execução: assumir controle dos datasets](#10-passo-obrigatório-após-a-execução-assumir-controle-dos-datasets)
+11. [Perguntas frequentes](#11-perguntas-frequentes)
 
 ---
 
@@ -456,7 +457,72 @@ Após a execução, o pipeline produz:
 
 ---
 
-## 10. Perguntas frequentes
+## 10. Passo obrigatório após a execução: assumir controle dos datasets
+
+Após a execução de qualquer um dos pipelines (`run_deploy_gestao.bat` ou
+`run_deploy_lideres.bat`), o **Service Principal** (SPN) configurado no `.env`
+assume a posse (ownership) de todos os modelos semânticos publicados. Isso
+acontece na Fase 3 do pipeline, quando a API `Default.TakeOver` é chamada
+automaticamente para cada dataset.
+
+O SPN precisa ser o owner para que o pipeline consiga configurar o agendamento
+de refresh e disparar a atualização inicial via API. No entanto, o SPN é uma
+identidade de aplicação (não interativa): ele **não possui interface gráfica**
+e não consegue acessar o portal do Power BI Service. Isso gera uma limitação
+importante.
+
+### Por que é necessário assumir o controle manualmente
+
+Enquanto o SPN for o owner de um dataset, o Power BI Service trata o
+agendamento e as credenciais como pertencentes a uma conta de serviço. Isso
+significa que:
+
+- As configurações de **Scheduled Refresh** no portal podem aparecer
+  inativas ou inacessíveis para usuários humanos do workspace.
+- Qualquer alteração posterior no agendamento, nas credenciais de data source
+  ou nas configurações do gateway precisa ser feita via API REST, pois o SPN
+  não pode fazer login no portal.
+- Se o secret do SPN expirar ou for revogado, os refreshes automáticos
+  param sem que nenhum usuário do workspace consiga corrigir pela interface.
+
+Para que um **usuário humano** (admin ou membro do workspace) possa gerenciar
+os datasets pelo portal (alterar horários, reconfigurar credenciais, vincular
+a um gateway, etc.), ele precisa **assumir o controle** (Take Over) de cada
+dataset após a execução do pipeline.
+
+### Como assumir o controle pelo portal
+
+1. Acesse o **Power BI Service** (https://app.powerbi.com).
+2. Navegue até o workspace onde os painéis foram publicados (o workspace
+   correspondente ao `WORKSPACE_ID` do `.env`).
+3. Para cada **modelo semântico** (semantic model / dataset) publicado pelo
+   pipeline:
+   - Clique no ícone de **configurações** (engrenagem) ao lado do nome do
+     modelo, ou acesse **Configurações > Configurações do conjunto de dados**.
+   - Na seção **Atualização agendada** (Scheduled Refresh), clique no botão
+     **Assumir controle** (Take Over).
+   - Confirme a ação.
+4. Após assumir o controle, você se torna o owner do dataset e pode:
+   - Ativar/desativar o agendamento pelo portal.
+   - Alterar horários e frequência de refresh.
+   - Reconfigurar credenciais de data sources.
+   - Vincular o dataset a um gateway on-premises, se necessário.
+
+
+> **Nota:** Na próxima execução do pipeline, o SPN chamará `Default.TakeOver`
+> novamente e reassumirá a posse dos datasets automaticamente. Isso é
+> esperado e não causa problemas: o pipeline reconfigura o agendamento e
+> dispara o refresh. Após cada execução, basta repetir o passo de assumir o
+> controle pelo portal se quiser manter o gerenciamento pela interface.
+
+### Referências
+
+- [Datasets - Take Over In Group (Microsoft Docs)](https://learn.microsoft.com/en-us/rest/api/power-bi/datasets/take-over-in-group)
+- [Configurar atualização agendada (Microsoft Docs)](https://learn.microsoft.com/en-us/power-bi/connect-data/refresh-scheduled-refresh)
+
+---
+
+## 11. Perguntas frequentes
 
 ### O pipeline altera meu template original?
 
