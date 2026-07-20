@@ -108,12 +108,12 @@ das fases.
   cada um). Isso é intencional, não há restrição de unicidade.
 - `lideres_projeto.xlsx` tem **uma linha por líder**; a coluna `doacao` traz
   as doações separadas por vírgula na mesma célula (não uma linha por par).
-- Convenção de painel compartilhado: quando várias pessoas devem ver
-  exatamente as mesmas doações (ex.: superintendentes), a planilha usa **um
-  único líder representando o grupo** (ex.: `Superintendência`), não um líder
-  por pessoa. O compartilhamento do login acontece fora do pipeline, em
-  `user_dashboards.xlsx`: a mesma `url_painel` é colada nas linhas de cada
-  pessoa do grupo. Não "corrija" isso duplicando o líder por pessoa.
+- Pessoas com acesso irrestrito (ex.: superintendentes) **não entram** em
+  `lideres_projeto.xlsx`. Elas usam o painel mestre publicado direto da pasta
+  `template/` (sem filtro de doação), fora do loop deste pipeline. O
+  compartilhamento do login acontece em `user_dashboards.xlsx`: a mesma
+  `url_painel` do painel mestre é colada nas linhas de cada pessoa com esse
+  acesso. Não crie um líder artificial para representar esse grupo.
 - A tabela `dGestão` e a coluna `RESPONSAVEL` continuam no modelo (relações
   intactas), mas não são mais o eixo dos painéis. `gestao_areas.xlsx` foi
   aposentada como entrada do pipeline.

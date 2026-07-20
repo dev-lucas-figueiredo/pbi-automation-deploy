@@ -196,7 +196,6 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
 | ------------------ | -------------------------------------------------------------- |
 | Fabiana Cunha       | ARTERY PRODUCOES_2025_01, SWAROVSKI_2025_01, FUMCAD BERURI      |
 | Gabriela Sampaio    | ABDI_2025_01, AMAZONIA ANDES 2025_01                            |
-| Superintendência    | ABDI_2025_01, ARTERY PRODUCOES_2025_01, ... (todas as doações)  |
 
 #### Regras e observações
 
@@ -210,17 +209,17 @@ O pipeline lê três planilhas Excel. Todas devem ficar na pasta `data/`.
   texto **não** são corrigidas. Sintoma típico de nome errado: o painel do líder
   abre **vazio**. Confira os nomes de doação exatamente como aparecem no relatório.
 
-#### Convenção: painel compartilhado por vários logins ("Superintendência")
+#### Acesso irrestrito (ex.: superintendentes)
 
-Quando um grupo de pessoas precisa enxergar exatamente as mesmas doações (ex.:
-superintendentes com acesso a tudo), não crie um líder por pessoa: crie **um
-único líder** representando o grupo (ex.: `Superintendência`) com a lista
-completa de doações. O pipeline publica **1 painel só** para esse grupo.
+Pessoas que precisam ver **todas** as doações sem filtro (ex.: superintendentes)
+**não entram** em `lideres_projeto.xlsx`. Elas usam o painel mestre publicado
+diretamente a partir da pasta `template/` (sem filtro de doação, gerado fora
+deste pipeline), não um painel gerado por líder.
 
-O compartilhamento acontece em `user_dashboards.xlsx` (seção 5.3): depois de
-publicar o painel do grupo e obter a `url_painel`, cole a **mesma URL** nas
-linhas de cada pessoa do grupo. Cada pessoa mantém seu próprio usuário/senha,
-mas todas apontam para o mesmo painel.
+O compartilhamento acontece em `user_dashboards.xlsx` (seção 5.3): publique o
+painel mestre uma vez e cole a **mesma `url_painel`** nas linhas de cada pessoa
+com acesso irrestrito. Cada pessoa mantém seu próprio usuário/senha, mas todas
+apontam para o mesmo painel mestre.
 
 ---
 
