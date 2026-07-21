@@ -304,7 +304,7 @@ def main(mode):
 
     if os.path.exists(config.USER_DASHBOARDS_PATH):
         try:
-            gerar_sql_user_dashboards()
+            gerar_sql_user_dashboards(mode)
         except Exception as e:
             console.print(f"[yellow]Falha ao gerar SQL de user_dashboards: {e}[/yellow]\n")
 

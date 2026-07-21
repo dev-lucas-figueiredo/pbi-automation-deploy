@@ -85,17 +85,21 @@ def carregar_schedule(path=config.REFRESH_SCHEDULE_PATH):
     return schedule
 
 
-def gerar_sql_user_dashboards():
+def gerar_sql_user_dashboards(mode: str = ""):
     """
-    Le data/user_dashboards.xlsx e gera sql/carga_user_dashboards.sql
+    Le data/user_dashboards.xlsx e gera sql/carga_user_dashboards_{mode}.sql
     no formato upsert_user_dashboard com criptografia de url_painel.
+    O sufixo do arquivo reflete o modo do pipeline (gestao ou lideres),
+    evitando sobreescrita quando os dois pipelines sao executados em sequencia.
     """
+    sufixo = f"_{mode}" if mode else ""
+    nome_sql = f"carga_user_dashboards{sufixo}.sql"
     console.print()
     console.print(
         Panel(
             Text.assemble(
                 ("ETAPA FINAL / GERACAO SQL\n", "bold white"),
-                ("Origem: data/user_dashboards.xlsx  →  Destino: sql/carga_user_dashboards.sql", "dim"),
+                (f"Origem: data/user_dashboards.xlsx  →  Destino: sql/{nome_sql}", "dim"),
             ),
             border_style="cyan",
             padding=(0, 2),
@@ -133,6 +137,7 @@ def gerar_sql_user_dashboards():
     chamadas_sql = "\n\n".join(linhas)
     sql = f"""-- =============================================================================
 -- Envio em lote de user_dashboards (com criptografia da url_painel)
+-- Modo: {mode or 'indefinido'}
 -- Gerado automaticamente pelo pipeline de deploy em {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 -- =============================================================================
 
@@ -153,7 +158,7 @@ COMMIT;
 -- =============================================================================
 """
 
-    sql_path = Path(config.SQL_DIR) / "carga_user_dashboards.sql"
+    sql_path = Path(config.SQL_DIR) / nome_sql
     ja_existia = sql_path.exists()
     with open(sql_path, "w", encoding="utf-8") as f:
         f.write(sql)
