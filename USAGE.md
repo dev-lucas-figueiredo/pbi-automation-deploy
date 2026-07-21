@@ -325,7 +325,7 @@ Cada modo tem sua planilha de agendamento (mesmo formato, nomes diferentes):
 | Atributo       | Valor                                                                              |
 | -------------- | ---------------------------------------------------------------------------------- |
 | **Obrigatória** | Não                                                                                |
-| **Função**     | Gera o arquivo `sql/carga_user_dashboards.sql` com comandos de upsert para um banco PostgreSQL |
+| **Função**     | Gera o arquivo `sql/carga_user_dashboards_{modo}.sql` (ex.: `carga_user_dashboards_gestao.sql`) com comandos de upsert para um banco PostgreSQL |
 | **Lida por**   | `datasources.py` (função `gerar_sql_user_dashboards`)                               |
 
 #### Colunas necessárias
@@ -345,7 +345,7 @@ Cada modo tem sua planilha de agendamento (mesmo formato, nomes diferentes):
 
 #### O que o SQL gerado faz
 
-O arquivo `sql/carga_user_dashboards.sql` produzido contém:
+O arquivo `sql/carga_user_dashboards_{modo}.sql` produzido contém:
 
 1. `SET app.url_key`, que define a chave de criptografia da sessão (valor de
    `URL_ENCRYPTION_KEY` no `.env`).
@@ -453,7 +453,7 @@ Após a execução, o pipeline produz:
 | -------- | ---------------------------------------------------------------------------------------------- |
 | `build/` | Artefatos compilados (uma pasta `.SemanticModel` e uma `.Report` por unidade). Pode ser ignorada pelo usuário, pois é intermediária. |
 | `logs/`  | Arquivo JSON por execução (`deploy_<modo>_YYYYMMDD_HHMMSS.json`) com log detalhado de cada fase, tempos e erros. |
-| `sql/`   | `carga_user_dashboards.sql`: script SQL para carga de usuários no banco de dados (gerado apenas se `user_dashboards.xlsx` existir). |
+| `sql/`   | `carga_user_dashboards_{modo}.sql` (ex.: `carga_user_dashboards_gestao.sql`, `carga_user_dashboards_lideres.sql`): script SQL para carga de usuarios no banco de dados (gerado apenas se `user_dashboards.xlsx` existir; um arquivo por modo executado). |
 
 ---
 

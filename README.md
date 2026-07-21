@@ -49,7 +49,7 @@ DELEGATED_PASSWORD=...
 | `refresh_schedule.xlsx`         | gestão  |     Sim     | Horários de refresh por gestão (`gestor`, `horarios`).            |
 | `lideres_projeto.xlsx`          | líderes |     Sim     | Mapeamento líder -> doações (`lider`, `email`, `doacao`).          |
 | `refresh_schedule_lideres.xlsx` | líderes |     Sim     | Horários de refresh por líder (`lider`, `horarios`).              |
-| `user_dashboards.xlsx`          | ambos   |     Não     | Gera `sql/carga_user_dashboards.sql` (usuário, senha, URL).       |
+| `user_dashboards.xlsx`          | ambos   |     Não     | Gera `sql/carga_user_dashboards_{modo}.sql` (usuario, senha, URL). |
 
 > Cada modo só exige as planilhas do seu par. Colunas obrigatórias, exemplos e
 > regras especiais: ver [USAGE.md § 5](USAGE.md#5-planilhas-de-entrada-pasta-data).
