@@ -87,13 +87,23 @@ def carregar_schedule(path=config.REFRESH_SCHEDULE_PATH):
 
 def gerar_sql_user_dashboards(mode: str = ""):
     """
-    Le data/user_dashboards.xlsx e gera sql/carga_user_dashboards_{mode}.sql
-    no formato upsert_user_dashboard com criptografia de url_painel.
-    O sufixo do arquivo reflete o modo do pipeline (gestao ou lideres),
-    evitando sobreescrita quando os dois pipelines sao executados em sequencia.
+    Le data/user_dashboards.xlsx e gera sql/carga_user_dashboards_{mode}.sql.
+
+    O backend (Lovable Cloud) tem uma tabela e uma funcao de upsert por modo:
+    public.user_dashboards_gestao / upsert_user_dashboard_gestao e
+    public.user_dashboards_lideres / upsert_user_dashboard_lideres. O sufixo
+    do arquivo e da funcao chamada refletem o modo do pipeline, evitando
+    sobreescrita e gravacao na tabela errada quando os dois modos sao
+    executados em sequencia.
     """
-    sufixo = f"_{mode}" if mode else ""
-    nome_sql = f"carga_user_dashboards{sufixo}.sql"
+    if mode not in ("gestao", "lideres"):
+        raise Exception(
+            f"Modo invalido para geracao de SQL de user_dashboards: {mode!r} "
+            "(esperado 'gestao' ou 'lideres')"
+        )
+    funcao_sql = f"upsert_user_dashboard_{mode}"
+    tabela_sql = f"user_dashboards_{mode}"
+    nome_sql = f"carga_user_dashboards_{mode}.sql"
     console.print()
     console.print(
         Panel(
@@ -126,7 +136,7 @@ def gerar_sql_user_dashboards(mode: str = ""):
         senha = str(row["senha"]).replace("'", "''")
         url = str(row["url_painel"]).replace("'", "''")
         linhas.append(
-            f"SELECT public.upsert_user_dashboard(\n"
+            f"SELECT public.{funcao_sql}(\n"
             f"  '{usuario}',\n"
             f"  '{senha}',\n"
             f"  '{url}',\n"
@@ -137,7 +147,7 @@ def gerar_sql_user_dashboards(mode: str = ""):
     chamadas_sql = "\n\n".join(linhas)
     sql = f"""-- =============================================================================
 -- Envio em lote de user_dashboards (com criptografia da url_painel)
--- Modo: {mode or 'indefinido'}
+-- Modo: {mode} | Tabela: public.{tabela_sql}
 -- Gerado automaticamente pelo pipeline de deploy em {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 -- =============================================================================
 
@@ -154,7 +164,7 @@ COMMIT;
 
 -- =============================================================================
 -- Conferência opcional (NÃO mostra a URL em texto — apenas usuários gravados):
---   SELECT usuario FROM public.user_dashboards ORDER BY usuario;
+--   SELECT usuario FROM public.{tabela_sql} ORDER BY usuario;
 -- =============================================================================
 """
 

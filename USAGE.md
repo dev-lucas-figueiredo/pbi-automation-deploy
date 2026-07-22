@@ -349,9 +349,16 @@ O arquivo `sql/carga_user_dashboards_{modo}.sql` produzido contém:
 
 1. `SET app.url_key`, que define a chave de criptografia da sessão (valor de
    `URL_ENCRYPTION_KEY` no `.env`).
-2. Uma chamada `SELECT public.upsert_user_dashboard(...)` por linha da
-   planilha, criando ou atualizando o registro do usuário no banco.
+2. Uma chamada `SELECT public.upsert_user_dashboard_<modo>(...)` por linha da
+   planilha (`upsert_user_dashboard_gestao` ou `upsert_user_dashboard_lideres`,
+   conforme o `.bat` executado), criando ou atualizando o registro do usuário
+   na tabela `user_dashboards_<modo>` correspondente no banco.
 3. Tudo envolto em uma transação `BEGIN ... COMMIT`.
+
+> O backend (Lovable Cloud) mantém **duas tabelas separadas**, uma por modo
+> (`user_dashboards_gestao` e `user_dashboards_lideres`), cada uma com sua
+> própria função de upsert. Rodar os dois `.bat` gera dois arquivos SQL
+> distintos, cada um gravando na tabela do seu modo.
 
 > **Nota:** Esta planilha **não vem incluída** no download do repositório.
 > Se não existir na pasta `data/`, o pipeline simplesmente pula a geração de

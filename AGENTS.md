@@ -56,7 +56,7 @@ pbi_deploy/
 ├── fabric.py             Fabric Items API: listar itens, build payload, criar/atualizar, poll_lro.
 ├── powerbi.py            Power BI REST: TakeOver, credenciais SharePoint, refresh schedule/trigger.
 ├── builder.py            Clona template -> build/, injeta filtro (gestão ou líder), fixa referência do dataset.
-├── datasources.py        Lê planilhas (líderes/doações, schedule) e gera sql/carga_user_dashboards.sql.
+├── datasources.py        Lê planilhas (líderes/doações, schedule) e gera sql/carga_user_dashboards_<modo>.sql.
 ├── prerequisites.py      Etapa 0: valida .env, templates, planilhas (por modo), cria pastas.
 ├── runner.py             executar_fase(): loop genérico com progress bar + tabela + log por item.
 └── pipeline.py           Orquestra as fases em main(mode)/run(mode); conhece a ordem completa e os dois modos.
@@ -111,6 +111,7 @@ das fases.
   existem mas **não são chamados** no fluxo principal de `pipeline.py` (a
   configuração de credenciais SharePoint é feita fora deste script hoje). Não
   remova sem confirmar com o usuário, pois pode ser um próximo passo planejado.
+
 ### Comuns aos dois modos
 
 - Cada modo tem seu par (planilha de entrada + planilha de agendamento):
@@ -122,6 +123,13 @@ das fases.
   cria os dois conjuntos de painéis lado a lado no workspace.
 - Só `pipeline._preparar_gestao`/`_preparar_lideres` conhecem a especificidade do
   modo; o resto de `main(mode)` é genérico (itera `unidades`, chama `compilar`).
+- `datasources.gerar_sql_user_dashboards(mode)` grava em tabelas diferentes no
+  backend (Lovable Cloud) conforme o modo: chama `public.upsert_user_dashboard_gestao`
+  ou `public.upsert_user_dashboard_lideres`, gravando em `user_dashboards_gestao`
+  ou `user_dashboards_lideres` respectivamente (tabelas e funções espelhadas,
+  mesma estrutura). `mode` é obrigatório aqui e a função levanta exceção se não
+  for `"gestao"` ou `"lideres"`; não existe mais uma função/tabela genérica
+  `upsert_user_dashboard`/`user_dashboards` sem sufixo.
 
 ### Modo gestão (RESPONSAVEL)
 
