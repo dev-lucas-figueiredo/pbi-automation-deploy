@@ -130,6 +130,14 @@ das fases.
   mesma estrutura). `mode` é obrigatório aqui e a função levanta exceção se não
   for `"gestao"` ou `"lideres"`; não existe mais uma função/tabela genérica
   `upsert_user_dashboard`/`user_dashboards` sem sufixo.
+- A origem dos logins é o **cadastro de usuários Lovable**
+  (`config.USER_DASHBOARDS_PATH`, arquivo `Cadastro de usuários Lovable - Painel
+  Financeiro Executivo.xlsx` baixado do OneDrive da FAS para `data/`), com uma
+  aba por modo (`config.USER_DASHBOARDS_ABAS`). Só as colunas `usuario`, `senha`
+  e `url_painel` são lidas; as demais (identificação, fórmulas) são ignoradas e
+  linhas incompletas são descartadas. O arquivo contém senhas em texto plano e
+  está no `.gitignore` (`data/Cadastro*.xlsx`); **nunca** o adicione ao git.
+  O antigo `data/user_dashboards.xlsx` foi aposentado por este cadastro.
 
 ### Modo gestão (RESPONSAVEL)
 
@@ -161,4 +169,5 @@ das fases.
   pelo pipeline).
 - Acesso irrestrito (ex.: superintendentes) **não entra** em `lideres_projeto.xlsx`:
   usa o painel mestre publicado direto da pasta `template/` (sem filtro), e o
-  login é compartilhado em `user_dashboards.xlsx` colando a mesma `url_painel`.
+  login é compartilhado no cadastro de usuários Lovable colando a mesma
+  `url_painel` nas linhas dessas pessoas.

@@ -64,9 +64,9 @@ def verificar_pre_requisitos(mode):
             tabela.add_row(label, "[red]FALTA[/red]", f"Nao encontrado: {caminho}")
             tudo_ok = False
 
-    # user_dashboards.xlsx e opcional para geracao SQL
+    # O cadastro de usuarios Lovable e opcional (so para geracao SQL)
     if os.path.exists(config.USER_DASHBOARDS_PATH):
-        tabela.add_row("Planilha user_dashboards", "[green]OK[/green]", config.USER_DASHBOARDS_PATH)
+        tabela.add_row("Cadastro usuarios Lovable", "[green]OK[/green]", config.USER_DASHBOARDS_PATH)
 
     Path(config.BUILD_DIR).mkdir(exist_ok=True)
     Path(config.LOG_DIR).mkdir(exist_ok=True)

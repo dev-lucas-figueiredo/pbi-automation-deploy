@@ -1,9 +1,11 @@
 """Leitura das planilhas de entrada e geracao do SQL de user_dashboards.
 
 Fonte de dados do pipeline:
-    lideres_projeto.xlsx    mapeamento lider -> doacao (define os paineis).
-    refresh_schedule.xlsx   horarios de refresh por lider.
-    user_dashboards.xlsx    credenciais/URLs para gerar o SQL de carga.
+    gestao_areas.xlsx                mapeamento de gestoes (modo gestao).
+    lideres_projeto.xlsx             mapeamento lider -> doacoes (modo lideres).
+    refresh_schedule*.xlsx           horarios de refresh (um arquivo por modo).
+    Cadastro de usuarios Lovable     credenciais/URLs para o SQL de carga
+                                     (OneDrive da FAS, uma aba por modo).
 """
 
 from datetime import datetime
@@ -87,7 +89,13 @@ def carregar_schedule(path=config.REFRESH_SCHEDULE_PATH):
 
 def gerar_sql_user_dashboards(mode: str = ""):
     """
-    Le data/user_dashboards.xlsx e gera sql/carga_user_dashboards_{mode}.sql.
+    Le a aba do modo no cadastro de usuarios Lovable e gera
+    sql/carga_user_dashboards_{mode}.sql.
+
+    O cadastro (USER_DASHBOARDS_PATH) e editado no OneDrive da FAS e baixado
+    para data/; tem uma aba por modo (USER_DASHBOARDS_ABAS). Apenas as colunas
+    usuario, senha e url_painel sao usadas; colunas extras da planilha
+    (identificacao do lider/gestao, formulas auxiliares) sao ignoradas.
 
     O backend (Lovable Cloud) tem uma tabela e uma funcao de upsert por modo:
     public.user_dashboards_gestao / upsert_user_dashboard_gestao e
@@ -101,6 +109,7 @@ def gerar_sql_user_dashboards(mode: str = ""):
             f"Modo invalido para geracao de SQL de user_dashboards: {mode!r} "
             "(esperado 'gestao' ou 'lideres')"
         )
+    aba = config.USER_DASHBOARDS_ABAS[mode]
     funcao_sql = f"upsert_user_dashboard_{mode}"
     tabela_sql = f"user_dashboards_{mode}"
     nome_sql = f"carga_user_dashboards_{mode}.sql"
@@ -109,7 +118,7 @@ def gerar_sql_user_dashboards(mode: str = ""):
         Panel(
             Text.assemble(
                 ("ETAPA FINAL / GERACAO SQL\n", "bold white"),
-                (f"Origem: data/user_dashboards.xlsx  →  Destino: sql/{nome_sql}", "dim"),
+                (f"Origem: cadastro Lovable (aba '{aba}')  →  Destino: sql/{nome_sql}", "dim"),
             ),
             border_style="cyan",
             padding=(0, 2),
@@ -119,7 +128,7 @@ def gerar_sql_user_dashboards(mode: str = ""):
     if not config.URL_ENCRYPTION_KEY:
         raise Exception("URL_ENCRYPTION_KEY ausente no .env")
 
-    df = pd.read_excel(config.USER_DASHBOARDS_PATH, dtype=str)
+    df = pd.read_excel(config.USER_DASHBOARDS_PATH, sheet_name=aba, dtype=str)
 
     colunas_obrigatorias = ["usuario", "senha", "url_painel"]
     for col in colunas_obrigatorias:

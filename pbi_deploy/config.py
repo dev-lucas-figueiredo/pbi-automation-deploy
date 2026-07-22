@@ -35,7 +35,15 @@ REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule.xlsx")
 LIDERES_PROJETO_PATH = os.path.join("data", "lideres_projeto.xlsx")
 LIDERES_REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule_lideres.xlsx")
 
-USER_DASHBOARDS_PATH = os.path.join("data", "user_dashboards.xlsx")
+# Cadastro de usuarios do Lovable: editado no OneDrive da FAS, baixado para
+# data/ antes do deploy. Nunca versionado (contem credenciais). Uma aba por modo.
+USER_DASHBOARDS_PATH = os.path.join(
+    "data", "Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx"
+)
+USER_DASHBOARDS_ABAS = {
+    "gestao": "Gestão - Lista de Usuários",
+    "lideres": "Líder - Lista de Usuários",
+}
 
 BASE_SEMANTIC_MODEL = os.path.join(TEMPLATE_DIR, f"{PBI_PROJECT_NAME}.SemanticModel")
 BASE_REPORT = os.path.join(TEMPLATE_DIR, f"{PBI_PROJECT_NAME}.Report")

@@ -16,7 +16,7 @@ pipeline. Para uma visão geral do projeto e da arquitetura, consulte o
    - 5.1 [`lideres_projeto.xlsx`](#51-lideres_projetoxlsx) (modo líderes)
    - 5.2 [`gestao_areas.xlsx`](#52-gestao_areasxlsx) (modo gestão)
    - 5.3 [Agendamento: `refresh_schedule*.xlsx`](#53-agendamento-refresh_schedulexlsx)
-   - 5.4 [`user_dashboards.xlsx`](#54-user_dashboardsxlsx)
+   - 5.4 [Cadastro de usuários Lovable](#54-cadastro-de-usuários-lovable---painel-financeiro-executivoxlsx)
 6. [Configuração do `.env`](#6-configuração-do-env)
 7. [Execução do pipeline](#7-execução-do-pipeline)
 8. [O que acontece em cada etapa](#8-o-que-acontece-em-cada-etapa)
@@ -90,7 +90,7 @@ primeira vez, você precisa adicioná-los manualmente:
 | `.env`                      | Raiz do projeto      | Solicite ao administrador do projeto. Contém credenciais Azure e chaves.       |
 | Template Power BI (`.pbip`) | Pasta `template/`    | Salve o relatório-mestre no formato `.pbip` dentro de `template/` (ver seção 4). |
 | `lideres_projeto.xlsx`      | Pasta `data/`        | (Modo líderes) Monte o mapeamento líder -> doações (ver seção 5.1).            |
-| `user_dashboards.xlsx`      | Pasta `data/`        | Solicite ao administrador. Opcional, sendo necessário apenas para geração de SQL.  |
+| `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx` | Pasta `data/` | Baixe do OneDrive da FAS (ver seção 5.4). Opcional, sendo necessário apenas para geração de SQL. |
 
 Os demais arquivos (código, planilhas `gestao_areas.xlsx`, `refresh_schedule.xlsx`
 e `refresh_schedule_lideres.xlsx`, ambiente Python `env/`, etc.) **já vêm
@@ -115,7 +115,8 @@ pbi-automation-deploy/
 │   ├── refresh_schedule.xlsx               (modo gestão, já incluída)
 │   ├── lideres_projeto.xlsx                (modo líderes, adicionar manualmente, ver seção 5.1)
 │   ├── refresh_schedule_lideres.xlsx       (modo líderes, já incluída)
-│   └── user_dashboards.xlsx                (adicionar manualmente, opcional)
+│   └── Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx
+│                                           (baixar do OneDrive, opcional, ver seção 5.4)
 │
 ├── template/                            ← adicionar o template Power BI (ver seção 4)
 │   ├── Painel Financeiro Executivo.pbip
@@ -192,8 +193,8 @@ Para atualizar o template (ex.: novo visual, nova medida), basta:
 ## 5. Planilhas de entrada (pasta `data/`)
 
 Todas as planilhas ficam na pasta `data/`. Cada modo usa seu par de planilhas
-(a de definição dos painéis + a de agendamento); `user_dashboards.xlsx` é
-opcional e vale para os dois modos.
+(a de definição dos painéis + a de agendamento); o cadastro de usuários
+Lovable (seção 5.4) é opcional e tem uma aba para cada modo.
 
 | Modo    | Define os painéis        | Agendamento                     |
 | ------- | ------------------------ | ------------------------------- |
@@ -217,7 +218,7 @@ opcional e vale para os dois modos.
 | Coluna    | Tipo  | Descrição                                                                                              |
 | --------- | ----- | ----------------------------------------------------------------------------------------------------- |
 | `lider`   | Texto | Nome do líder de projeto. **Uma linha por líder** (não repita o líder em várias linhas). Cada líder distinto gera um painel separado (o nome vira o sufixo do painel). |
-| `email`   | Texto | E-mail do líder, só para referência (facilita achar o login dele em `user_dashboards.xlsx`). **Não é lido pelo pipeline**; pode ficar em branco. |
+| `email`   | Texto | E-mail do líder, só para referência (facilita achar o login dele no cadastro de usuários Lovable, seção 5.4). **Não é lido pelo pipeline**; pode ficar em branco. |
 | `doacao`  | Texto | Todas as doações lideradas por esse líder, **separadas por vírgula**, na mesma célula.                 |
 
 #### Exemplo
@@ -246,10 +247,10 @@ Pessoas que precisam ver **todas** as doações sem filtro (ex.: superintendente
 diretamente a partir da pasta `template/` (sem filtro de doação, gerado fora
 deste pipeline), não um painel gerado por líder.
 
-O compartilhamento acontece em `user_dashboards.xlsx` (seção 5.4): publique o
-painel mestre uma vez e cole a **mesma `url_painel`** nas linhas de cada pessoa
-com acesso irrestrito. Cada pessoa mantém seu próprio usuário/senha, mas todas
-apontam para o mesmo painel mestre.
+O compartilhamento acontece no cadastro de usuários Lovable (seção 5.4):
+publique o painel mestre uma vez e cole a **mesma `url_painel`** nas linhas de
+cada pessoa com acesso irrestrito. Cada pessoa mantém seu próprio
+usuário/senha, mas todas apontam para o mesmo painel mestre.
 
 ---
 
@@ -320,28 +321,42 @@ Cada modo tem sua planilha de agendamento (mesmo formato, nomes diferentes):
 
 ---
 
-### 5.4. `user_dashboards.xlsx`
+### 5.4. `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx`
 
 | Atributo       | Valor                                                                              |
 | -------------- | ---------------------------------------------------------------------------------- |
 | **Obrigatória** | Não                                                                                |
-| **Função**     | Gera o arquivo `sql/carga_user_dashboards_{modo}.sql` (ex.: `carga_user_dashboards_gestao.sql`) com comandos de upsert para um banco PostgreSQL |
+| **Função**     | Cadastro de logins do Lovable. Gera o arquivo `sql/carga_user_dashboards_{modo}.sql` (ex.: `carga_user_dashboards_gestao.sql`) com comandos de upsert para um banco PostgreSQL |
 | **Lida por**   | `datasources.py` (função `gerar_sql_user_dashboards`)                               |
 
-#### Colunas necessárias
+#### Fluxo de edição (OneDrive)
+
+A planilha "mestre" vive no **OneDrive da FAS** e é editada online. Antes de
+rodar o deploy: baixe-a do OneDrive e coloque-a na pasta `data/` com o nome
+exato `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx`.
+
+> **Nunca versione este arquivo** (contém senhas em texto plano). O `.gitignore`
+> já bloqueia `data/Cadastro*.xlsx`; não force a adição com `git add -f`.
+
+#### Abas (uma por modo)
+
+| Aba                          | Usada pelo `.bat`         | Grava na tabela             |
+| ---------------------------- | -------------------------- | ---------------------------- |
+| `Líder - Lista de Usuários`  | `run_deploy_lideres.bat`   | `user_dashboards_lideres`    |
+| `Gestão - Lista de Usuários` | `run_deploy_gestao.bat`    | `user_dashboards_gestao`     |
+
+#### Colunas usadas pelo pipeline
 
 | Coluna       | Tipo  | Descrição                                                                                    |
 | ------------ | ----- | -------------------------------------------------------------------------------------------- |
-| `usuario`    | Texto | Nome de usuário para acesso ao dashboard (ex.: seu.nome@fas-amazonia.org).                     |
+| `usuario`    | Texto | Login do usuário no Lovable (ex.: seu.nome@fas-amazonia.org).                                  |
 | `senha`      | Texto | Senha do usuário.                                                                            |
 | `url_painel` | Texto | URL do painel publicado no Power BI. Será criptografada no SQL gerado usando `URL_ENCRYPTION_KEY`. |
 
-#### Exemplo
-
-| usuario      | senha    | url_painel                                             |
-| ------------ | -------- | ------------------------------------------------------ |
-| joao.silva@fas-amazonia.org   | S3nh@123 | https://app.powerbi.com/view?r=eyJ...                  |
-| maria.souza@fas-amazonia.org  | M@ri4!   | https://app.powerbi.com/view?r=abc...                  |
+As demais colunas das abas (`lider`, `sufixo_painel`, colunas de fórmula
+auxiliar de senha etc.) são só referência para quem edita a planilha e **são
+ignoradas** pelo pipeline. Linhas com `usuario`, `senha` ou `url_painel` em
+branco (incluindo linhas de observação) são descartadas automaticamente.
 
 #### O que o SQL gerado faz
 
@@ -360,9 +375,9 @@ O arquivo `sql/carga_user_dashboards_{modo}.sql` produzido contém:
 > própria função de upsert. Rodar os dois `.bat` gera dois arquivos SQL
 > distintos, cada um gravando na tabela do seu modo.
 
-> **Nota:** Esta planilha **não vem incluída** no download do repositório.
-> Se não existir na pasta `data/`, o pipeline simplesmente pula a geração de
-> SQL. Nenhum erro é gerado.
+> **Nota:** Esta planilha **não vem incluída** no download do repositório
+> (baixe-a do OneDrive da FAS). Se não existir na pasta `data/`, o pipeline
+> simplesmente pula a geração de SQL. Nenhum erro é gerado.
 
 ---
 
@@ -383,7 +398,7 @@ compartilhado ou versionado** (já está no `.gitignore`).
 | `CLIENT_ID`         | ID de aplicação (Application ID) do Service Principal registrado no Azure AD.                                                         |
 | `CLIENT_SECRET`     | Segredo (client secret) do Service Principal. Gerado na seção *Certificates & secrets* do registro de app no portal Azure.            |
 | `WORKSPACE_ID`      | ID do workspace no Microsoft Fabric / Power BI Service onde os painéis serão publicados. Pode ser encontrado na URL do workspace.      |
-| `URL_ENCRYPTION_KEY`| Chave usada para criptografar as URLs dos painéis no SQL gerado por `user_dashboards.xlsx`. Deve ser a mesma chave usada no banco de dados. |
+| `URL_ENCRYPTION_KEY`| Chave usada para criptografar as URLs dos painéis no SQL gerado a partir do cadastro de usuários Lovable. Deve ser a mesma chave usada no banco de dados. |
 
 ### Variáveis opcionais
 
@@ -448,7 +463,7 @@ O que cada `.bat` faz automaticamente:
 | Fase 1  | Modelos semânticos     | Clona o template, compila um modelo semântico por unidade (gestão ou líder) e faz upload via Fabric Items API. |
 | Fase 2  | Relatórios vinculados  | Ajusta a referência ao modelo semântico publicado e faz upload do relatório via Fabric Items API.   |
 | Fase 3  | Pós-deploy             | Executa TakeOver (posse do dataset pelo SPN), configura agendamento de refresh e dispara refresh inicial. |
-| Final   | Resumo e SQL           | Exibe tabela com resumo executivo, salva log JSON em `logs/` e gera SQL em `sql/` (se `user_dashboards.xlsx` existir). |
+| Final   | Resumo e SQL           | Exibe tabela com resumo executivo, salva log JSON em `logs/` e gera SQL em `sql/` (se o cadastro de usuários Lovable existir em `data/`). |
 
 ---
 
@@ -460,7 +475,7 @@ Após a execução, o pipeline produz:
 | -------- | ---------------------------------------------------------------------------------------------- |
 | `build/` | Artefatos compilados (uma pasta `.SemanticModel` e uma `.Report` por unidade). Pode ser ignorada pelo usuário, pois é intermediária. |
 | `logs/`  | Arquivo JSON por execução (`deploy_<modo>_YYYYMMDD_HHMMSS.json`) com log detalhado de cada fase, tempos e erros. |
-| `sql/`   | `carga_user_dashboards_{modo}.sql` (ex.: `carga_user_dashboards_gestao.sql`, `carga_user_dashboards_lideres.sql`): script SQL para carga de usuarios no banco de dados (gerado apenas se `user_dashboards.xlsx` existir; um arquivo por modo executado). |
+| `sql/`   | `carga_user_dashboards_{modo}.sql` (ex.: `carga_user_dashboards_gestao.sql`, `carga_user_dashboards_lideres.sql`): script SQL para carga de usuarios no banco de dados (gerado apenas se o cadastro de usuários Lovable existir em `data/`; um arquivo por modo executado). |
 
 ---
 
