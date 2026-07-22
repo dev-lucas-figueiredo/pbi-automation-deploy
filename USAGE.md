@@ -92,7 +92,7 @@ primeira vez, você precisa adicioná-los manualmente:
 | `lideres_projeto.xlsx`      | Pasta `data/`        | (Modo líderes) Monte o mapeamento líder -> doações (ver seção 5.1).            |
 | `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx` | Pasta `data/` | Baixe do OneDrive da FAS (ver seção 5.4). Opcional, sendo necessário apenas para geração de SQL. |
 
-Os demais arquivos (código, planilhas `gestao_areas.xlsx`, `refresh_schedule.xlsx`
+Os demais arquivos (código, planilhas `gestao_areas.xlsx`, `refresh_schedule_gestao.xlsx`
 e `refresh_schedule_lideres.xlsx`, ambiente Python `env/`, etc.) **já vêm
 incluídos** no download e estão prontos para uso. Você só precisa adicionar
 `lideres_projeto.xlsx` se for usar o modo líderes.
@@ -112,7 +112,7 @@ pbi-automation-deploy/
 │
 ├── data/                                ← planilhas de entrada (ver seção 5)
 │   ├── gestao_areas.xlsx                   (modo gestão, já incluída)
-│   ├── refresh_schedule.xlsx               (modo gestão, já incluída)
+│   ├── refresh_schedule_gestao.xlsx          (modo gestão, já incluída)
 │   ├── lideres_projeto.xlsx                (modo líderes, adicionar manualmente, ver seção 5.1)
 │   ├── refresh_schedule_lideres.xlsx       (modo líderes, já incluída)
 │   └── Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx
@@ -199,7 +199,7 @@ Lovable (seção 5.4) é opcional e tem uma aba para cada modo.
 | Modo    | Define os painéis        | Agendamento                     |
 | ------- | ------------------------ | ------------------------------- |
 | líderes | `lideres_projeto.xlsx`   | `refresh_schedule_lideres.xlsx` |
-| gestão  | `gestao_areas.xlsx`      | `refresh_schedule.xlsx`         |
+| gestão  | `gestao_areas.xlsx`      | `refresh_schedule_gestao.xlsx`  |
 
 ---
 
@@ -289,7 +289,7 @@ filtro adicional que a restringe apenas aos dados da própria `GRI`.
 
 Cada modo tem sua planilha de agendamento (mesmo formato, nomes diferentes):
 
-- Modo gestão: **`refresh_schedule.xlsx`** (coluna-chave `gestor`).
+- Modo gestão: **`refresh_schedule_gestao.xlsx`** (coluna-chave `gestor`).
 - Modo líderes: **`refresh_schedule_lideres.xlsx`** (coluna-chave `lider`).
 
 | Atributo        | Valor                                                                                     |
@@ -578,7 +578,7 @@ para os painéis por líder de projeto. Cada modo usa suas próprias planilhas
 ### Como adicionar/remover uma gestão? (modo gestão)
 
 Edite `data/gestao_areas.xlsx` (coluna `RESPONSAVEL`) e, opcionalmente,
-`data/refresh_schedule.xlsx`. Execute `run_deploy_gestao.bat`.
+`data/refresh_schedule_gestao.xlsx`. Execute `run_deploy_gestao.bat`.
 
 ### Como remover um líder ou gestão do pipeline?
 
@@ -598,7 +598,7 @@ pontas, mas não corrige diferenças de digitação no meio do texto).
 
 Após publicar os modelos, o pipeline configura a atualização automática dos
 dados no Power BI Service. Os horários vêm da planilha de agendamento do modo
-(`refresh_schedule.xlsx` ou `refresh_schedule_lideres.xlsx`) e o fuso horário é
+(`refresh_schedule_gestao.xlsx` ou `refresh_schedule_lideres.xlsx`) e o fuso horário é
 **SA Western Standard Time (UTC−4, horário de Manaus)**.
 
 ### Onde encontro os logs de erro?

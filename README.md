@@ -46,7 +46,7 @@ DELEGATED_PASSWORD=...
 | Arquivo                         | Modo    | Obrigatório | Função                                                             |
 | ------------------------------- | ------- | :---------: | ----------------------------------------------------------------- |
 | `gestao_areas.xlsx`             | gestão  |     Sim     | Lista de gestões (`RESPONSAVEL`, `SUPERINTENDÊNCIA`).              |
-| `refresh_schedule.xlsx`         | gestão  |     Sim     | Horários de refresh por gestão (`gestor`, `horarios`).            |
+| `refresh_schedule_gestao.xlsx`  | gestão  |     Sim     | Horários de refresh por gestão (`gestor`, `horarios`).            |
 | `lideres_projeto.xlsx`          | líderes |     Sim     | Mapeamento líder -> doações (`lider`, `email`, `doacao`).          |
 | `refresh_schedule_lideres.xlsx` | líderes |     Sim     | Horários de refresh por líder (`lider`, `horarios`).              |
 | `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx` | ambos | Não | Cadastro de logins (baixado do OneDrive da FAS; uma aba por modo). Gera `sql/carga_user_dashboards_{modo}.sql`. **Nunca versionar.** |

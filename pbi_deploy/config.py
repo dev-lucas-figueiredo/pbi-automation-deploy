@@ -29,7 +29,7 @@ SQL_DIR = "sql"
 
 # Modo gestao: painel por RESPONSAVEL (dGestão).
 EXCEL_FILE_PATH = os.path.join("data", "gestao_areas.xlsx")
-REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule.xlsx")
+REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule_gestao.xlsx")
 
 # Modo lideres: painel por doacoes do lider (dDoação).
 LIDERES_PROJETO_PATH = os.path.join("data", "lideres_projeto.xlsx")

@@ -115,7 +115,7 @@ das fases.
 ### Comuns aos dois modos
 
 - Cada modo tem seu par (planilha de entrada + planilha de agendamento):
-  gestao usa `gestao_areas.xlsx` + `refresh_schedule.xlsx`; lideres usa
+  gestao usa `gestao_areas.xlsx` + `refresh_schedule_gestao.xlsx`; lideres usa
   `lideres_projeto.xlsx` + `refresh_schedule_lideres.xlsx`. `carregar_schedule(path)`
   recebe o caminho por parâmetro e aceita coluna `gestor` ou `lider`.
 - Os dois modos publicam no **mesmo** `WORKSPACE_ID`. Não há colisão porque os
