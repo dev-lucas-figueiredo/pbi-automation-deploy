@@ -165,9 +165,12 @@ Ao salvar, o Power BI Desktop cria automaticamente três itens:
   coluna `DOAÇÃO`. É nessa entidade que o pipeline injeta o filtro report-level
   com as doações de cada líder, substituindo todo o filtro de nível de relatório
   na cópia gerada (não é preciso deixar placeholder).
-- **Modo gestão:** o relatório deve conter um filtro de nível de relatório
-  (report-level) na entidade `dGestão`, propriedade `RESPONSAVEL`. É esse filtro
-  placeholder que o pipeline localiza e preenche com os valores de cada gestão.
+- **Modo gestão:** o modelo semântico deve conter a tabela `dGestão` com a
+  coluna `RESPONSAVEL`. O pipeline monta o filtro report-level por código e
+  substitui todo o filtro de nível de relatório na cópia gerada, igual ao modo
+  líderes (não é preciso deixar placeholder no template).
+- Em ambos os modos, filtros de nível de **página** e de **visual** do template
+  são preservados; só o filtro de nível de relatório é substituído.
 - O nome do projeto deve ser exatamente **`Painel Financeiro Executivo`**
   (é o valor da constante `PBI_PROJECT_NAME` em `config.py`).
 - Não renomeie as pastas `.SemanticModel` e `.Report`, pois o pipeline depende

@@ -48,55 +48,12 @@ def clone_and_compile_gestao(gestao_name):
         with open(report_json_path, "r", encoding="utf-8") as f:
             report_json = json.load(f)
 
-        filter_config = report_json.get("filterConfig", {})
-        filtros = filter_config.get("filters", [])
-
-        for filtro in filtros:
-            entity = (
-                filtro.get("field", {})
-                .get("Column", {})
-                .get("Expression", {})
-                .get("SourceRef", {})
-                .get("Entity")
-            )
-            prop = filtro.get("field", {}).get("Column", {}).get("Property")
-            if entity == "dGestão" and prop == "RESPONSAVEL":
-                if gestao_name == "GFP e KFW":
-                    df = pd.read_excel(config.EXCEL_FILE_PATH)
-                    gestores_kfw = df[df["RESPONSAVEL"].str.startswith("KFW", na=False)]["RESPONSAVEL"].unique().tolist()
-                    valores_consolidado = ["GFP"] + gestores_kfw
-                    values = [[_literal(g)] for g in valores_consolidado]
-                elif gestao_name == "GRI":
-                    df = pd.read_excel(config.EXCEL_FILE_PATH)
-                    gestores_sg = df[df["SUPERINTENDÊNCIA"] == "SG"]["RESPONSAVEL"].unique().tolist()
-                    values = [[_literal(g)] for g in gestores_sg]
-                else:
-                    values = [[_literal(gestao_name)]]
-
-                filtro["filter"] = {
-                    "Version": 2,
-                    "From": [
-                        {"Name": "d", "Entity": "dGestão", "Type": 0}
-                    ],
-                    "Where": [
-                        {
-                            "Condition": {
-                                "In": {
-                                    "Expressions": [
-                                        {
-                                            "Column": {
-                                                "Expression": {"SourceRef": {"Source": "d"}},
-                                                "Property": "RESPONSAVEL"
-                                            }
-                                        }
-                                    ],
-                                    "Values": values
-                                }
-                            }
-                        }
-                    ]
-                }
-                break
+        responsaveis = _responsaveis_da_gestao(gestao_name)
+        # Sem valores o filtro nao restringe nada: melhor falhar do que publicar
+        # um painel de gestao mostrando os dados de todas as gestoes.
+        if not responsaveis:
+            raise ValueError(f"Nenhum RESPONSAVEL encontrado para a gestao '{gestao_name}'")
+        report_json["filterConfig"] = {"filters": [_montar_filtro_responsavel(responsaveis)]}
 
         with open(report_json_path, "w", encoding="utf-8") as f:
             json.dump(report_json, f, ensure_ascii=False, indent=2)
@@ -106,6 +63,63 @@ def clone_and_compile_gestao(gestao_name):
         _injetar_filtro_pessoal_gri(target_report_folder)
 
     return new_filename, target_semantic_folder, target_report_folder
+
+
+def _responsaveis_da_gestao(gestao_name):
+    """Devolve a lista de RESPONSAVEL que entram no painel daquela gestao.
+
+    Casos especiais: "GFP e KFW" agrupa GFP com todas as gestoes KFW; a GRI
+    recebe todos os responsaveis da superintendencia SG. As demais gestoes
+    filtram apenas o proprio nome.
+    """
+    if gestao_name == "GFP e KFW":
+        df = pd.read_excel(config.EXCEL_FILE_PATH)
+        gestores_kfw = df[df["RESPONSAVEL"].str.startswith("KFW", na=False)]["RESPONSAVEL"].unique().tolist()
+        return ["GFP"] + gestores_kfw
+    if gestao_name == "GRI":
+        df = pd.read_excel(config.EXCEL_FILE_PATH)
+        return df[df["SUPERINTENDÊNCIA"] == "SG"]["RESPONSAVEL"].dropna().unique().tolist()
+    return [gestao_name]
+
+
+def _montar_filtro_responsavel(responsaveis):
+    """Monta o filtro report-level dGestão.RESPONSAVEL IN (responsaveis)."""
+    values = [[_literal(r)] for r in responsaveis]
+    return {
+        "name": "filtro_responsavel_gestao",
+        "field": {
+            "Column": {
+                "Expression": {"SourceRef": {"Entity": "dGestão"}},
+                "Property": "RESPONSAVEL",
+            }
+        },
+        "type": "Categorical",
+        "filter": {
+            "Version": 2,
+            "From": [
+                {"Name": "d", "Entity": "dGestão", "Type": 0}
+            ],
+            "Where": [
+                {
+                    "Condition": {
+                        "In": {
+                            "Expressions": [
+                                {
+                                    "Column": {
+                                        "Expression": {"SourceRef": {"Source": "d"}},
+                                        "Property": "RESPONSAVEL",
+                                    }
+                                }
+                            ],
+                            "Values": values,
+                        }
+                    }
+                }
+            ],
+        },
+        "howCreated": "User",
+        "isLockedInViewMode": True,
+    }
 
 
 def _injetar_filtro_pessoal_gri(target_report_folder):

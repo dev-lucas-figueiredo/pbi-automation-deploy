@@ -73,7 +73,8 @@ das fases.
 - **Nova chamada à Fabric Items API** → `fabric.py`.
 - **Nova chamada à Power BI REST API** (datasets, refresh, gateways) → `powerbi.py`.
 - **Mudança na regra do relatório por gestão** (filtro RESPONSAVEL, casos GFP+KFW
-  e GRI/SG) → `builder.py` (`clone_and_compile_gestao`, `_injetar_filtro_pessoal_gri`)
+  e GRI/SG) → `builder.py` (`clone_and_compile_gestao`, `_responsaveis_da_gestao`,
+  `_montar_filtro_responsavel`, `_injetar_filtro_pessoal_gri`)
   e `pipeline._identificar_gestores`.
 - **Mudança na regra do relatório por líder** (filtro de doações) →
   `builder.py` (`clone_and_compile_lider` e `_montar_filtro_doacao`).
@@ -151,8 +152,10 @@ das fases.
 - `gestao_areas.xlsx` ignora linhas onde `RESPONSAVEL == SUPERINTENDÊNCIA`
   (filtro intencional). `SG` é suprimida como painel individual, mas seus dados
   aparecem no painel consolidado da `GRI`.
-- O modo gestão depende de o template ter um filtro report-level placeholder em
-  `dGestão.RESPONSAVEL` (o builder localiza esse filtro e injeta os valores).
+- `clone_and_compile_gestao` **substitui** todo o `filterConfig` do report por um
+  filtro `dGestão.RESPONSAVEL IN (responsáveis da gestão)` montado em
+  `_montar_filtro_responsavel`; não depende de placeholder no template (antes
+  dependia, e apagar o filtro no template publicava painéis sem filtro).
 
 ### Modo líderes (DOAÇÃO)
 
