@@ -72,11 +72,14 @@ def configurar_credenciais_sharepoint(delegated_token, dataset_id):
             raise APIError("SetCredentials", rc.status_code, rc.text, dict(rc.headers), url_cred)
 
 
-def configurar_refresh_schedule(pbi_token, dataset_id, horarios=None):
+def configurar_refresh_schedule(pbi_token, dataset_id, horarios=None, notify_option="NoNotification"):
     """
     Configura refresh agendado com os horarios fornecidos (fuso Manaus, UTC-4).
     Se horarios for lista vazia, desativa o agendamento automatico.
     Se horarios for None, usa o padrao 08:00 e 18:00.
+
+    `pbi_token` pode ser o do SPN ou o delegado. `notify_option` aceita
+    NoNotification e MailOnFailure; service principals so suportam o primeiro.
     """
     if horarios is None:
         horarios = ["08:00", "18:00"]
@@ -91,7 +94,7 @@ def configurar_refresh_schedule(pbi_token, dataset_id, horarios=None):
             ],
             "times": horarios if horarios else ["08:00"],
             "localTimeZoneId": "SA Western Standard Time",
-            "notifyOption": "NoNotification",
+            "notifyOption": notify_option,
         }
     }
     r = requests.patch(
@@ -104,8 +107,45 @@ def configurar_refresh_schedule(pbi_token, dataset_id, horarios=None):
         raise APIError("RefreshSchedule", r.status_code, r.text, dict(r.headers), url)
 
 
+def configurar_agendamento_com_fallback(
+    spn_token, dataset_id, horarios, notify_option, obter_token_delegado=None
+):
+    """Aplica o agendamento respeitando a politica de notificacao.
+
+    Com MailOnFailure tenta primeiro o token delegado. Se qualquer coisa falhar
+    (token indisponivel, 401/403, usuario delegado que nao e dono de um dataset
+    do SPN), refaz com NoNotification e o token do SPN: a falha de notificacao
+    nunca pode deixar o dataset sem agendamento. Se o fallback tambem falhar o
+    erro propaga normalmente.
+
+    Devolve (notify_aplicado, aviso); `aviso` e None quando nao houve fallback.
+    """
+    aviso = None
+    if notify_option == "MailOnFailure":
+        try:
+            if obter_token_delegado is None:
+                raise Exception("token delegado nao disponivel")
+            configurar_refresh_schedule(
+                obter_token_delegado(), dataset_id, horarios, "MailOnFailure"
+            )
+            return "MailOnFailure", None
+        except Exception as e:
+            motivo = f"HTTP {e.status_code}" if isinstance(e, APIError) else f"{type(e).__name__}: {str(e)[:150]}"
+            aviso = (
+                f"MailOnFailure nao aplicado ({motivo}); agendamento mantido com NoNotification. "
+                "Configure a notificacao no Power BI Service pelo dono do modelo."
+            )
+
+    configurar_refresh_schedule(spn_token, dataset_id, horarios, "NoNotification")
+    return "NoNotification", aviso
+
+
 def disparar_refresh(pbi_token, dataset_id):
-    """Dispara refresh imediato assincrono."""
+    """Dispara refresh imediato assincrono.
+
+    Mantem NoNotification: a documentacao do endpoint informa que notifyOption
+    nao se aplica a operacoes feitas por service principal.
+    """
     url = f"{config.PBI_API_BASE}/groups/{config.WORKSPACE_ID}/datasets/{dataset_id}/refreshes"
     r = requests.post(
         url,

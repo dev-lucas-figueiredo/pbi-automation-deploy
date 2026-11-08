@@ -26,6 +26,15 @@ DELEGATED_PASSWORD = os.getenv("DELEGATED_PASSWORD")
 # itens novos em vez de atualizar os existentes.
 PBI_PUBLISHED_NAME = os.getenv("PBI_PUBLISHED_NAME", "Painel Financeiro Executivo")
 
+# Notificacao por e-mail de falha do refresh agendado. SPN so suporta
+# NoNotification; MailOnFailure exige o token delegado (ver powerbi.py).
+NOTIFY_OPTIONS_VALIDAS = ("MailOnFailure", "NoNotification")
+_notify_bruto = os.getenv("REFRESH_NOTIFY_OPTION", "MailOnFailure").strip()
+# Valor invalido e mantido como veio para prerequisites.py reportar o erro.
+REFRESH_NOTIFY_OPTION = next(
+    (o for o in NOTIFY_OPTIONS_VALIDAS if o.lower() == _notify_bruto.lower()), _notify_bruto
+)
+
 TEMPLATE_DIR = "template"
 BUILD_DIR = "build"
 LOG_DIR = "logs"

@@ -30,9 +30,9 @@ from rich import box
 
 from . import config
 from .console import console, mask, banner
-from .auth import autenticar_azure
+from .auth import autenticar_azure, get_delegated_token
 from .fabric import listar_itens_workspace, upload_item_to_fabric
-from .powerbi import takeover_dataset, configurar_refresh_schedule, disparar_refresh
+from .powerbi import takeover_dataset, configurar_agendamento_com_fallback, disparar_refresh
 from .builder import clone_and_compile_gestao, clone_and_compile_lider, fix_report_cloud_reference
 from .datasources import carregar_lideres_doacoes, carregar_schedule, gerar_sql_user_dashboards
 from .prerequisites import verificar_pre_requisitos
@@ -186,6 +186,23 @@ def main(mode):
         f"{len(schedule_map)} {rotulo}\n"
     )
 
+    # Token delegado obtido uma unica vez; se falhar, a falha e lembrada para
+    # nao repetir a chamada ROPC a cada unidade.
+    cache_delegado = {}
+
+    def obter_token_delegado():
+        if "erro" in cache_delegado:
+            raise cache_delegado["erro"]
+        if "token" not in cache_delegado:
+            try:
+                cache_delegado["token"] = get_delegated_token()
+            except Exception as e:
+                cache_delegado["erro"] = e
+                raise
+        return cache_delegado["token"]
+
+    notify_por_unidade = {}
+
     def processar_pos_deploy(unidade):
         dataset_id = memoria_deploy[unidade]["dataset_id"]
         if not dataset_id:
@@ -194,11 +211,17 @@ def main(mode):
         horarios = schedule_map.get(unidade, ["08:00", "18:00"])
 
         takeover_dataset(token, dataset_id)
-        configurar_refresh_schedule(token, dataset_id, horarios)
+        notify_aplicado, aviso = configurar_agendamento_com_fallback(
+            token, dataset_id, horarios, config.REFRESH_NOTIFY_OPTION, obter_token_delegado
+        )
+        notify_por_unidade[unidade] = {"notify_option": notify_aplicado, "aviso": aviso}
         disparar_refresh(token, dataset_id)
 
         schedule_str = ",".join(horarios) if horarios else "desativado"
-        return "Configurado", f"schedule={schedule_str} | refresh enfileirado"
+        detalhe = f"schedule={schedule_str} | notify={notify_aplicado}"
+        if aviso:
+            detalhe += " (fallback)"
+        return "Configurado", f"{detalhe} | refresh enfileirado"
 
     unidades_fase3 = list(memoria_deploy.keys())
     log_fase3 = executar_fase(
@@ -208,6 +231,17 @@ def main(mode):
         processar_pos_deploy,
         cor="bright_magenta",
     )
+    for r in log_fase3:
+        r.update(notify_por_unidade.get(r["lider"], {}))
+    avisos_notify = [r for r in log_fase3 if r.get("aviso")]
+    if avisos_notify:
+        console.print(
+            f"\n[yellow bold]AVISO:[/yellow bold] {len(avisos_notify)} de {len(log_fase3)} unidades "
+            f"ficaram com NoNotification em vez de {config.REFRESH_NOTIFY_OPTION} "
+            f"(agendamento ativo; a notificacao precisa ser configurada no Power BI Service)."
+        )
+        for motivo in sorted({r["aviso"] for r in avisos_notify}):
+            console.print(f"  [yellow]- {motivo}[/yellow]")
     s3 = sum(1 for r in log_fase3 if r["ok"])
     f3 = len(log_fase3) - s3
 
@@ -252,6 +286,17 @@ def main(mode):
     )
     console.print(sumario)
 
+    contagem_notify = {}
+    for r in log_fase3:
+        if r.get("notify_option"):
+            contagem_notify[r["notify_option"]] = contagem_notify.get(r["notify_option"], 0) + 1
+    if contagem_notify:
+        console.print(
+            "[bold]notifyOption aplicado:[/bold] "
+            + " | ".join(f"{k}: {v}" for k, v in sorted(contagem_notify.items()))
+            + f"  [dim](solicitado: {config.REFRESH_NOTIFY_OPTION})[/dim]"
+        )
+
     cor_final = "green" if (f1 + f2 + f3) == 0 else ("yellow" if (s1 + s2 + s3) > 0 else "red")
     console.print(
         Panel(
@@ -281,6 +326,11 @@ def main(mode):
                 "fase1": log_fase1,
                 "fase2": log_fase2,
                 "fase3": log_fase3,
+                "notify_option_solicitado": config.REFRESH_NOTIFY_OPTION,
+                "notify_option_aplicado": contagem_notify,
+                "avisos": [
+                    {"unidade": r["lider"], "aviso": r["aviso"]} for r in avisos_notify
+                ],
                 "totais": {
                     "fase1_ok": s1,
                     "fase1_erro": f1,

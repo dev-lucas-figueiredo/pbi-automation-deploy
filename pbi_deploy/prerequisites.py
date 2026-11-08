@@ -43,6 +43,16 @@ def verificar_pre_requisitos(mode):
             tabela.add_row(f"ENV {var}", "[red]FALTA[/red]", "Variavel ausente no .env")
             tudo_ok = False
 
+    if config.REFRESH_NOTIFY_OPTION in config.NOTIFY_OPTIONS_VALIDAS:
+        tabela.add_row("ENV REFRESH_NOTIFY_OPTION", "[green]OK[/green]", config.REFRESH_NOTIFY_OPTION)
+    else:
+        tabela.add_row(
+            "ENV REFRESH_NOTIFY_OPTION",
+            "[red]INVALIDO[/red]",
+            f"'{config.REFRESH_NOTIFY_OPTION}' (aceitos: {', '.join(config.NOTIFY_OPTIONS_VALIDAS)})",
+        )
+        tudo_ok = False
+
     if config.TEMPLATE_ERRO:
         tabela.add_row("Template (.pbip)", "[red]FALTA[/red]", config.TEMPLATE_ERRO)
         tudo_ok = False
