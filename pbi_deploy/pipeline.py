@@ -76,12 +76,6 @@ def _preparar_gestao():
         console.print(
             f"[bold cyan]Painel consolidado GFP e KFW adicionado[/bold cyan] (agrupa GFP + {len(gestores_kfw)} gestões KFW)"
         )
-    if "GRI" in gestores:
-        gestores_sg = df[df["SUPERINTENDÊNCIA"] == "SG"]["RESPONSAVEL"].unique().tolist()
-        console.print(
-            f"[bold cyan]Painel GRI ampliado:[/bold cyan] inclui todos os responsaveis da superintendencia SG "
-            f"({', '.join(gestores_sg)}) | pagina Pessoal restrita a GRI"
-        )
 
     def compilar(gestor):
         return clone_and_compile_gestao(gestor)
