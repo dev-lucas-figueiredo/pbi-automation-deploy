@@ -16,4 +16,4 @@ data/user_dashboards.xlsx
 data/Cadastro*.xlsx
 
 # Arquivos gerados pelo Python
-__pycache__/
+__pycache__/.pytest_cache/

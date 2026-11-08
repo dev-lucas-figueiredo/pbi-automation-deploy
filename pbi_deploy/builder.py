@@ -29,19 +29,48 @@ def _literal(valor):
     return {"Literal": {"Value": f"'{escapado}'"}}
 
 
-def clone_and_compile_gestao(gestao_name):
-    """Clona o template para a gestao e injeta o filtro de RESPONSAVEL no report."""
-    new_filename = f"{config.PBI_PROJECT_NAME} - {gestao_name}"
-    target_semantic_folder = os.path.join(config.BUILD_DIR, f"{new_filename}.SemanticModel")
-    target_report_folder = os.path.join(config.BUILD_DIR, f"{new_filename}.Report")
+def _clonar_template(nome_publicado):
+    """Copia o template para build/ com o nome publicado e ajusta o .platform.
 
-    if os.path.exists(target_semantic_folder):
-        shutil.rmtree(target_semantic_folder)
-    if os.path.exists(target_report_folder):
-        shutil.rmtree(target_report_folder)
+    O Report do template referencia o modelo por byPath com o nome do arquivo
+    original; isso e substituido por byConnection em fix_report_cloud_reference
+    (Fase 2), entao o nome da pasta de destino pode ser o nome publicado.
+    """
+    if not (config.BASE_SEMANTIC_MODEL and config.BASE_REPORT):
+        raise ValueError(config.TEMPLATE_ERRO or "Template nao encontrado")
+
+    target_semantic_folder = os.path.join(config.BUILD_DIR, f"{nome_publicado}.SemanticModel")
+    target_report_folder = os.path.join(config.BUILD_DIR, f"{nome_publicado}.Report")
+
+    for pasta in (target_semantic_folder, target_report_folder):
+        if os.path.exists(pasta):
+            shutil.rmtree(pasta)
 
     shutil.copytree(config.BASE_SEMANTIC_MODEL, target_semantic_folder)
     shutil.copytree(config.BASE_REPORT, target_report_folder)
+
+    for pasta in (target_semantic_folder, target_report_folder):
+        _ajustar_display_name(pasta, nome_publicado)
+
+    return target_semantic_folder, target_report_folder
+
+
+def _ajustar_display_name(pasta_item, nome_publicado):
+    """Troca metadata.displayName do .platform pelo nome publicado do item."""
+    platform_path = os.path.join(pasta_item, ".platform")
+    if not os.path.isfile(platform_path):
+        return
+    with open(platform_path, "r", encoding="utf-8") as f:
+        platform = json.load(f)
+    platform.setdefault("metadata", {})["displayName"] = nome_publicado
+    with open(platform_path, "w", encoding="utf-8") as f:
+        json.dump(platform, f, ensure_ascii=False, indent=2)
+
+
+def clone_and_compile_gestao(gestao_name):
+    """Clona o template para a gestao e injeta o filtro de RESPONSAVEL no report."""
+    new_filename = f"{config.PBI_PUBLISHED_NAME} - {gestao_name}"
+    target_semantic_folder, target_report_folder = _clonar_template(new_filename)
 
     report_json_path = os.path.join(target_report_folder, "definition", "report.json")
     if os.path.exists(report_json_path):
@@ -199,17 +228,8 @@ def clone_and_compile_lider(lider_name, doacoes):
     casar com a coluna dDoação.DOAÇÃO do modelo. O filtro report-level fica
     travado em modo de visualizacao (isLockedInViewMode).
     """
-    new_filename = f"{config.PBI_PROJECT_NAME} - {lider_name}"
-    target_semantic_folder = os.path.join(config.BUILD_DIR, f"{new_filename}.SemanticModel")
-    target_report_folder = os.path.join(config.BUILD_DIR, f"{new_filename}.Report")
-
-    if os.path.exists(target_semantic_folder):
-        shutil.rmtree(target_semantic_folder)
-    if os.path.exists(target_report_folder):
-        shutil.rmtree(target_report_folder)
-
-    shutil.copytree(config.BASE_SEMANTIC_MODEL, target_semantic_folder)
-    shutil.copytree(config.BASE_REPORT, target_report_folder)
+    new_filename = f"{config.PBI_PUBLISHED_NAME} - {lider_name}"
+    target_semantic_folder, target_report_folder = _clonar_template(new_filename)
 
     report_json_path = os.path.join(target_report_folder, "definition", "report.json")
     if os.path.exists(report_json_path):

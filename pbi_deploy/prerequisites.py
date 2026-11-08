@@ -43,10 +43,28 @@ def verificar_pre_requisitos(mode):
             tabela.add_row(f"ENV {var}", "[red]FALTA[/red]", "Variavel ausente no .env")
             tudo_ok = False
 
-    caminhos = [
-        (config.BASE_SEMANTIC_MODEL, "Template SemanticModel"),
-        (config.BASE_REPORT, "Template Report"),
-    ]
+    if config.TEMPLATE_ERRO:
+        tabela.add_row("Template (.pbip)", "[red]FALTA[/red]", config.TEMPLATE_ERRO)
+        tudo_ok = False
+    else:
+        arquivos_template = [
+            (config.BASE_SEMANTIC_MODEL, "Template SemanticModel", None),
+            (config.BASE_REPORT, "Template Report", None),
+            (config.BASE_SEMANTIC_MODEL, "SemanticModel/.platform", ".platform"),
+            (config.BASE_REPORT, "Report/.platform", ".platform"),
+            (config.BASE_REPORT, "Report/definition.pbir", "definition.pbir"),
+        ]
+        for pasta, label, arquivo in arquivos_template:
+            caminho = os.path.join(pasta, arquivo) if arquivo else pasta
+            if os.path.exists(caminho):
+                tabela.add_row(label, "[green]OK[/green]", caminho)
+            else:
+                tabela.add_row(label, "[red]FALTA[/red]", f"Nao encontrado: {caminho}")
+                tudo_ok = False
+
+    tabela.add_row("Nome publicado", "[green]OK[/green]", config.PBI_PUBLISHED_NAME)
+
+    caminhos = []
     if mode == "gestao":
         caminhos += [
             (config.EXCEL_FILE_PATH, "Planilha de gestores"),

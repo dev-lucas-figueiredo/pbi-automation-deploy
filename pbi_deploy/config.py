@@ -5,6 +5,7 @@ daqui para nao reler variaveis de ambiente nem repetir caminhos.
 """
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -20,7 +21,10 @@ URL_ENCRYPTION_KEY = os.getenv("URL_ENCRYPTION_KEY")
 DELEGATED_USER = os.getenv("DELEGATED_USER")
 DELEGATED_PASSWORD = os.getenv("DELEGATED_PASSWORD")
 
-PBI_PROJECT_NAME = "Painel Financeiro Executivo"
+# Prefixo dos itens publicados no workspace. Independe do nome do arquivo do
+# template: o upload casa itens por displayName, entao mudar este valor cria
+# itens novos em vez de atualizar os existentes.
+PBI_PUBLISHED_NAME = os.getenv("PBI_PUBLISHED_NAME", "Painel Financeiro Executivo")
 
 TEMPLATE_DIR = "template"
 BUILD_DIR = "build"
@@ -45,8 +49,37 @@ USER_DASHBOARDS_ABAS = {
     "lideres": "Líder - Lista de Usuários",
 }
 
-BASE_SEMANTIC_MODEL = os.path.join(TEMPLATE_DIR, f"{PBI_PROJECT_NAME}.SemanticModel")
-BASE_REPORT = os.path.join(TEMPLATE_DIR, f"{PBI_PROJECT_NAME}.Report")
+
+
+def descobrir_template(template_dir):
+    """Localiza o par SemanticModel + Report dentro de `template_dir`.
+
+    Devolve (semantic_model, report, erro). Em caso de problema (zero ou mais
+    de um par, nomes-base diferentes) os dois caminhos vem como None e `erro`
+    traz uma mensagem listando o que foi encontrado. Nunca levanta excecao,
+    pois roda no import do modulo; quem reporta o erro e prerequisites.py.
+    """
+    pasta = Path(template_dir)
+    modelos = sorted(p.name for p in pasta.glob("*.SemanticModel") if p.is_dir())
+    relatorios = sorted(p.name for p in pasta.glob("*.Report") if p.is_dir())
+
+    if len(modelos) != 1 or len(relatorios) != 1:
+        return None, None, (
+            f"Esperada exatamente 1 pasta *.SemanticModel e 1 *.Report em {template_dir}/. "
+            f"Encontrado: SemanticModel={modelos or 'nenhuma'}, Report={relatorios or 'nenhuma'}"
+        )
+
+    base_modelo = modelos[0][: -len(".SemanticModel")]
+    base_relatorio = relatorios[0][: -len(".Report")]
+    if base_modelo != base_relatorio:
+        return None, None, (
+            f"Os nomes-base do template nao coincidem: '{modelos[0]}' e '{relatorios[0]}'"
+        )
+
+    return str(pasta / modelos[0]), str(pasta / relatorios[0]), None
+
+
+BASE_SEMANTIC_MODEL, BASE_REPORT, TEMPLATE_ERRO = descobrir_template(TEMPLATE_DIR)
 
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}" if TENANT_ID else None
 SCOPE_PBI = ["https://analysis.windows.net/powerbi/api/.default"]

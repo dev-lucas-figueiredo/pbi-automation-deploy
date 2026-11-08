@@ -115,7 +115,7 @@ def main(mode):
             Text.assemble(
                 ("PIPELINE DE PUBLICACAO POWER BI\n", "bold white"),
                 (f"Modo:      {rotulo_modo}\n", "bold cyan"),
-                (f"Projeto:   {config.PBI_PROJECT_NAME}\n", "white"),
+                (f"Projeto:   {config.PBI_PUBLISHED_NAME}\n", "white"),
                 (f"Workspace: {mask(config.WORKSPACE_ID)}\n", "dim"),
                 (f"Iniciado:  {inicio.strftime('%Y-%m-%d %H:%M:%S')}", "dim"),
             ),
