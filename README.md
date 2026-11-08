@@ -5,7 +5,7 @@ publica tudo no Microsoft Fabric, configurando agendamento e disparo de refresh.
 Há **dois modos**, cada um com seu `.bat`:
 
 - **Gestão** (`run_deploy_gestao.bat`): 1 painel por gestão, filtrado por
-  `RESPONSAVEL` (com consolidados GFP+KFW e GRI/SG).
+  `RESPONSAVEL` (com o consolidado GFP+KFW).
 - **Líderes** (`run_deploy_lideres.bat`): 1 painel por líder de projeto, filtrado
   pelas doações que aquele líder lidera.
 
@@ -31,10 +31,23 @@ CLIENT_ID=...
 CLIENT_SECRET=...
 WORKSPACE_ID=...
 URL_ENCRYPTION_KEY=...
-# Opcionais (fluxo delegado de credenciais SharePoint):
-DELEGATED_USER=...
+# Opcionais:
+PBI_PUBLISHED_NAME=Painel Financeiro Executivo   # prefixo dos itens publicados (padrão)
+REFRESH_NOTIFY_OPTION=MailOnFailure              # ou NoNotification (padrão: MailOnFailure)
+DELEGATED_USER=...       # conta usada só para tentar MailOnFailure no agendamento
 DELEGATED_PASSWORD=...
 ```
+
+- **Template:** qualquer nome. O pipeline localiza a única pasta `*.SemanticModel`
+  e a única `*.Report` em `template/`. O nome dos itens publicados é
+  `PBI_PUBLISHED_NAME` + ` - <unidade>`, estável mesmo se o template mudar de nome.
+  Alterar `PBI_PUBLISHED_NAME` cria itens novos no workspace (o upload casa por nome).
+- **Notificação de falha de refresh:** com `MailOnFailure` o agendamento é tentado
+  com a conta delegada; se não for possível (ex.: o dataset pertence ao SPN), o
+  pipeline avisa e mantém o agendamento com `NoNotification`. Ver
+  [USAGE.md § 10](USAGE.md#10-passo-obrigatório-após-a-execução-assumir-controle-dos-datasets).
+- **Credenciais das fontes** (SharePoint etc.) são configuradas manualmente no
+  Power BI Service; o pipeline não as altera.
 
 > Segredos: **não** versione o `.env` (já está no `.gitignore`). Significado de
 > cada variável e regras de formato: ver [USAGE.md § 6](USAGE.md#6-configuração-do-env).
@@ -96,6 +109,8 @@ pbi_deploy/
 ├── prerequisites.py      Validação de pré-requisitos por modo (Etapa 0).
 ├── runner.py             Executor genérico de uma fase (progresso + tabela).
 └── pipeline.py           Orquestração das fases (main(mode) / run(mode)).
+
+tests/                    Testes unitários (pytest; pip install -r requirements-dev.txt).
 ```
 
 ### Fluxo de dependências
@@ -123,6 +138,16 @@ python -m pbi_deploy.main lideres
 
 > Sem argumento (ou com um modo inválido), o pipeline só imprime o uso e sai
 > com código 2, sem tocar a API.
+
+## Testes
+
+```bat
+pip install -r requirements-dev.txt
+pytest
+```
+
+Não acessam a API (HTTP simulado). Cobrem a descoberta do template, os nomes
+publicados, os responsáveis por gestão e o fallback de `notifyOption`.
 
 ## Códigos de saída
 

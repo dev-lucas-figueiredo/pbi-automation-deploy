@@ -10,7 +10,7 @@ gera um modelo semântico + relatório por unidade, publica no Fabric e configur
 agendamento/refresh. Há **dois modos**, cada um com seu `.bat`:
 
 - **gestao** (`run_deploy_gestao.bat`): 1 painel por gestão, filtro
-  `dGestão.RESPONSAVEL` (com casos especiais GFP+KFW e GRI/SG). Fonte:
+  `dGestão.RESPONSAVEL` (com o consolidado especial GFP+KFW). Fonte:
   `data/gestao_areas.xlsx`.
 - **lideres** (`run_deploy_lideres.bat`): 1 painel por líder de projeto, filtro
   `dDoação.DOAÇÃO` com as doações daquele líder. Fonte: `data/lideres_projeto.xlsx`.
@@ -38,9 +38,12 @@ Rodar `python -m pbi_deploy.main` sem argumento (ou com modo inválido) só impr
 o uso e sai com código 2, sem tocar a API, então é seguro para checar o parse dos
 argumentos.
 
-Isso garante sintaxe e imports corretos sem tocar a API real. Não existe
-suíte de testes automatizados neste projeto. Não invente uma sem alinhar
-com o usuário.
+Isso garante sintaxe e imports corretos sem tocar a API real. Há também uma
+suíte mínima de testes unitários em `tests/` (pytest, sem acesso à API: HTTP
+simulado e templates em pasta temporária). `pytest` não está no `env/` de
+produção (que é versionado e vai para o usuário final); instale com
+`pip install -r requirements-dev.txt` em um ambiente próprio e rode `pytest`.
+Rode-a depois de mexer em `config.py`, `builder.py`, `powerbi.py` ou `pipeline.py`.
 
 ## Arquitetura
 
@@ -57,9 +60,11 @@ pbi_deploy/
 ├── powerbi.py            Power BI REST: TakeOver, credenciais SharePoint, refresh schedule/trigger.
 ├── builder.py            Clona template -> build/, injeta filtro (gestão ou líder), fixa referência do dataset.
 ├── datasources.py        Lê planilhas (líderes/doações, schedule) e gera sql/carga_user_dashboards_<modo>.sql.
-├── prerequisites.py      Etapa 0: valida .env, templates, planilhas (por modo), cria pastas.
+├── prerequisites.py      Etapa 0: valida .env, template, planilhas (por modo), cria pastas.
 ├── runner.py             executar_fase(): loop genérico com progress bar + tabela + log por item.
 └── pipeline.py           Orquestra as fases em main(mode)/run(mode); conhece a ordem completa e os dois modos.
+
+tests/                 Testes unitários (pytest): template, nomes publicados, responsáveis, notifyOption.
 ```
 
 Regra de dependência: `config`, `console` e `errors` são a camada base e
@@ -72,10 +77,13 @@ das fases.
 
 - **Nova chamada à Fabric Items API** → `fabric.py`.
 - **Nova chamada à Power BI REST API** (datasets, refresh, gateways) → `powerbi.py`.
-- **Mudança na regra do relatório por gestão** (filtro RESPONSAVEL, casos GFP+KFW
-  e GRI/SG) → `builder.py` (`clone_and_compile_gestao`, `_responsaveis_da_gestao`,
-  `_montar_filtro_responsavel`, `_injetar_filtro_pessoal_gri`)
-  e `pipeline._identificar_gestores`.
+- **Mudança na regra do relatório por gestão** (filtro RESPONSAVEL, caso GFP+KFW)
+  → `builder.py` (`clone_and_compile_gestao`, `_responsaveis_da_gestao`,
+  `_montar_filtro_responsavel`) e `pipeline._identificar_gestores`.
+- **Descoberta do template / nome publicado** → `config.descobrir_template` e
+  `config.PBI_PUBLISHED_NAME`; a clonagem está em `builder._clonar_template`.
+- **Política de notificação do agendamento** → `powerbi.configurar_agendamento_com_fallback`
+  e `config.REFRESH_NOTIFY_OPTION`; o uso na Fase 3 está em `pipeline.py`.
 - **Mudança na regra do relatório por líder** (filtro de doações) →
   `builder.py` (`clone_and_compile_lider` e `_montar_filtro_doacao`).
 - **Mudança na leitura do mapeamento líder → doação** → `datasources.py`
@@ -108,10 +116,47 @@ das fases.
 
 ## Pontos de atenção herdados do código original
 
-- `auth.get_delegated_token` e `powerbi.configurar_credenciais_sharepoint`
-  existem mas **não são chamados** no fluxo principal de `pipeline.py` (a
-  configuração de credenciais SharePoint é feita fora deste script hoje). Não
-  remova sem confirmar com o usuário, pois pode ser um próximo passo planejado.
+- `powerbi.configurar_credenciais_sharepoint` existe mas **não é chamada** no
+  fluxo principal de `pipeline.py`: as credenciais das fontes são configuradas
+  manualmente no Power BI Service e o refresh agendado já funciona. Mantenha a
+  função e não a chame.
+- `auth.get_delegated_token` **é usado** na Fase 3, só para tentar aplicar
+  `notifyOption = MailOnFailure` no agendamento (ver "Notificação de falha de
+  refresh" abaixo). Não use o token delegado para outra coisa sem alinhar.
+
+### Template, nome publicado e variáveis de ambiente
+
+- O template é descoberto por glob em `template/`: exatamente uma pasta
+  `*.SemanticModel` e uma `*.Report`, com o mesmo nome-base (qualquer nome).
+  A descoberta **não levanta exceção no import**: em caso de zero/vários pares,
+  `BASE_SEMANTIC_MODEL`/`BASE_REPORT` ficam `None` e `config.TEMPLATE_ERRO` traz
+  a mensagem, exibida na Etapa 0 (`prerequisites.py`).
+- O nome dos itens publicados vem de `PBI_PUBLISHED_NAME` (padrão `Painel
+  Financeiro Executivo`), **independente** do nome do template. O upload casa
+  itens por `displayName` + tipo: mudar este valor cria itens novos em vez de
+  atualizar os existentes. `PBI_PROJECT_NAME` foi removido.
+- `builder._clonar_template` copia o template para `build/<nome publicado>.*` e
+  reescreve `metadata.displayName` do `.platform`. O `byPath` do
+  `definition.pbir` do Report é substituído por `byConnection` na Fase 2
+  (`fix_report_cloud_reference`), então o nome da pasta do template não importa.
+- Variáveis opcionais: `PBI_PUBLISHED_NAME`, `REFRESH_NOTIFY_OPTION`,
+  `DELEGATED_USER`, `DELEGATED_PASSWORD`. Exemplo de `.env` no README.md.
+
+### Notificação de falha de refresh
+
+- `REFRESH_NOTIFY_OPTION` (padrão `MailOnFailure`; aceitos `MailOnFailure` e
+  `NoNotification`, validados na Etapa 0). Service principals só suportam
+  `NoNotification` no agendamento (Microsoft Learn, "Update Refresh Schedule In
+  Group"), que também exige que o chamador seja o dono do dataset.
+- `powerbi.configurar_agendamento_com_fallback`: com `MailOnFailure`, tenta o
+  token delegado; qualquer falha (token, 401, 403, dono diferente) gera aviso e
+  refaz com `NoNotification` via SPN. **Nunca deixe um dataset sem agendamento
+  por causa de notificação.** Como o SPN é o dono (TakeOver), é esperado que o
+  fallback ocorra; isso **não foi validado contra o serviço real**.
+- `disparar_refresh` continua com `NoNotification`: a documentação do endpoint
+  diz que `notifyOption` não se aplica a operações com service principal.
+- O `notifyOption` efetivamente aplicado e o aviso saem por unidade em
+  `fase3[]` do log JSON, mais `notify_option_aplicado` e `avisos` no topo.
 
 ### Comuns aos dois modos
 
@@ -120,7 +165,7 @@ das fases.
   `lideres_projeto.xlsx` + `refresh_schedule_lideres.xlsx`. `carregar_schedule(path)`
   recebe o caminho por parâmetro e aceita coluna `gestor` ou `lider`.
 - Os dois modos publicam no **mesmo** `WORKSPACE_ID`. Não há colisão porque os
-  nomes de item diferem (`... - GRI` vs `... - Fabiana Cunha`). Rodar os dois
+  nomes de item diferem (`... - DAF` vs `... - Fabiana Cunha`). Rodar os dois
   cria os dois conjuntos de painéis lado a lado no workspace.
 - Só `pipeline._preparar_gestao`/`_preparar_lideres` conhecem a especificidade do
   modo; o resto de `main(mode)` é genérico (itera `unidades`, chama `compilar`).
@@ -145,13 +190,10 @@ das fases.
 - O consolidado `"GFP e KFW"` é um caso especial em `builder.clone_and_compile_gestao`
   e em `pipeline._identificar_gestores`: agrupa `GFP` com todos os gestores cujo
   nome começa com `KFW`. Qualquer mudança na regra precisa refletir nos dois lugares.
-- O painel da `GRI` inclui no filtro report-level todos os `RESPONSAVEL` cuja
-  `SUPERINTENDÊNCIA == 'SG'` (`GRI`, `PDI`, `PPI`, `SG`), lidos da planilha; e a
-  página `Pessoal` recebe um filtro page-level `RESPONSAVEL = 'GRI'`
-  (`_injetar_filtro_pessoal_gri`), mantendo os dados de RH só da própria GRI.
 - `gestao_areas.xlsx` ignora linhas onde `RESPONSAVEL == SUPERINTENDÊNCIA`
-  (filtro intencional). `SG` é suprimida como painel individual, mas seus dados
-  aparecem no painel consolidado da `GRI`.
+  (filtro intencional). Não há mais tratamento especial para a `GRI` (nem para a
+  superintendência `SG`): qualquer gestão, inclusive `GRI`, que ainda apareça nas
+  planilhas é um painel comum, filtrado só pelo próprio `RESPONSAVEL`.
 - `clone_and_compile_gestao` **substitui** todo o `filterConfig` do report por um
   filtro `dGestão.RESPONSAVEL IN (responsáveis da gestão)` montado em
   `_montar_filtro_responsavel`; não depende de placeholder no template (antes

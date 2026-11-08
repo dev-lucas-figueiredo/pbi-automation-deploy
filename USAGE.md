@@ -66,8 +66,8 @@ pipeline. Para uma visão geral do projeto e da arquitetura, consulte o
 O pipeline tem **dois modos**, cada um com seu `.bat`:
 
 - **Gestão** (`run_deploy_gestao.bat`): clona uma cópia por gestão, injetando o
-  filtro de `RESPONSAVEL` na entidade `dGestão` (com os consolidados GFP+KFW e
-  GRI/SG). Fonte: `gestao_areas.xlsx`.
+  filtro de `RESPONSAVEL` na entidade `dGestão` (com o consolidado GFP+KFW).
+  Fonte: `gestao_areas.xlsx`.
 - **Líderes** (`run_deploy_lideres.bat`): clona uma cópia por líder de projeto,
   injetando o filtro com as doações daquele líder na entidade `dDoação`. Fonte:
   `lideres_projeto.xlsx`.
@@ -75,7 +75,7 @@ O pipeline tem **dois modos**, cada um com seu `.bat`:
 Em ambos, o pipeline publica cada modelo semântico e relatório no Microsoft
 Fabric e, por fim, configura agendamento de refresh e dispara uma atualização
 inicial. Os dois modos podem coexistir no mesmo workspace: os nomes dos itens
-não colidem (`... - GRI` vs `... - Fabiana Cunha`).
+não colidem (`... - DAF` vs `... - Fabiana Cunha`).
 
 ---
 
@@ -119,9 +119,9 @@ pbi-automation-deploy/
 │                                           (baixar do OneDrive, opcional, ver seção 5.4)
 │
 ├── template/                            ← adicionar o template Power BI (ver seção 4)
-│   ├── Painel Financeiro Executivo.pbip
-│   ├── Painel Financeiro Executivo.SemanticModel/
-│   └── Painel Financeiro Executivo.Report/
+│   ├── <nome do template>.pbip           (nome livre, ex.: Painel Financeiro Executivo - 2.0)
+│   ├── <nome do template>.SemanticModel/ (exatamente uma)
+│   └── <nome do template>.Report/        (exatamente uma, mesmo nome-base)
 │
 ├── env/                                 ← ambiente virtual Python (já incluído)
 ├── pbi_deploy/                          ← código do pipeline (não alterar)
@@ -149,15 +149,16 @@ da pasta `template/`.
 3. Na janela de salvamento, altere o tipo de arquivo para
    **Power BI Project (`.pbip`)**.
 4. Salve dentro da pasta `template/` do projeto com o nome
-   **`Painel Financeiro Executivo`**.
+   um nome qualquer (por exemplo **`Painel Financeiro Executivo - 2.0`**). O
+   nome do template não precisa ser fixo (ver 4.2).
 
 Ao salvar, o Power BI Desktop cria automaticamente três itens:
 
 | Item criado                                      | Tipo   | Descrição                                                   |
 | ------------------------------------------------ | ------ | ----------------------------------------------------------- |
-| `Painel Financeiro Executivo.pbip`                | Arquivo | Manifesto do projeto. Liga o relatório ao modelo semântico. |
-| `Painel Financeiro Executivo.SemanticModel/`      | Pasta  | Modelo de dados (tabelas, medidas, relações) em TMDL.       |
-| `Painel Financeiro Executivo.Report/`             | Pasta  | Visuais, páginas, filtros e bookmarks do relatório.         |
+| `<nome>.pbip`                | Arquivo | Manifesto do projeto. Liga o relatório ao modelo semântico. |
+| `<nome>.SemanticModel/`      | Pasta  | Modelo de dados (tabelas, medidas, relações) em TMDL.       |
+| `<nome>.Report/`             | Pasta  | Visuais, páginas, filtros e bookmarks do relatório.         |
 
 ### 4.2. Requisitos do template
 
@@ -171,10 +172,20 @@ Ao salvar, o Power BI Desktop cria automaticamente três itens:
   líderes (não é preciso deixar placeholder no template).
 - Em ambos os modos, filtros de nível de **página** e de **visual** do template
   são preservados; só o filtro de nível de relatório é substituído.
-- O nome do projeto deve ser exatamente **`Painel Financeiro Executivo`**
-  (é o valor da constante `PBI_PROJECT_NAME` em `config.py`).
-- Não renomeie as pastas `.SemanticModel` e `.Report`, pois o pipeline depende
-  dessa nomenclatura para localizar os artefatos.
+- O nome do arquivo do template é livre, mas `template/` deve conter
+  **exatamente uma** pasta `*.SemanticModel` e **exatamente uma** `*.Report`, com
+  o mesmo nome-base. Zero, mais de um par ou nomes-base diferentes são
+  reportados na Etapa 0 (a mensagem lista o que foi encontrado) e abortam a
+  execução. Ao trocar de versão do template, remova o par antigo da pasta.
+- Cada pasta precisa ter o `.platform`, e a pasta `.Report` o `definition.pbir`
+  (o Power BI Desktop os cria sozinho).
+- Não renomeie os sufixos `.SemanticModel` e `.Report`: o pipeline depende deles
+  para localizar os artefatos.
+- O **nome dos itens publicados** é independente do template: vem da variável
+  `PBI_PUBLISHED_NAME` do `.env` (padrão `Painel Financeiro Executivo`), no
+  formato `<PBI_PUBLISHED_NAME> - <unidade>`. O upload atualiza itens com o
+  mesmo nome e cria itens novos para nomes diferentes: **mudar
+  `PBI_PUBLISHED_NAME` gera duplicatas** no workspace.
 
 ### 4.3. Atualizando o template
 
@@ -280,11 +291,13 @@ Quando existem gestões cujo nome começa com `KFW`, a gestão `GFP` é removida
 lista individual e um painel consolidado **`GFP e KFW`** é adicionado, agrupando
 `GFP` + todas as gestões `KFW*` num único filtro de `RESPONSAVEL`.
 
-#### Regra especial: painel da GRI com dados da superintendência SG
+#### Observação sobre a GRI
 
-O painel da `GRI` exibe dados de **todos os responsáveis cuja `SUPERINTENDÊNCIA`
-é `SG`** (`GRI`, `PDI`, `PPI` e `SG`). Exceção: a página **Pessoal** recebe um
-filtro adicional que a restringe apenas aos dados da própria `GRI`.
+Não há mais regra especial para a `GRI`: se ela (ou `PDI`, `PPI`, `SG`) ainda
+constar na planilha, é tratada como qualquer outra gestão, com filtro apenas no
+próprio `RESPONSAVEL` (a regra `RESPONSAVEL == SUPERINTENDÊNCIA` continua
+valendo). Mantenha `gestao_areas.xlsx` e `refresh_schedule_gestao.xlsx` com as
+siglas atuais de `dGestão`.
 
 ---
 
@@ -407,12 +420,14 @@ compartilhado ou versionado** (já está no `.gitignore`).
 
 | Variável             | Descrição                                                                                                              |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `DELEGATED_USER`     | E-mail da conta de serviço para fluxo delegado (ROPC). Necessário apenas para configuração de credenciais SharePoint.   |
-| `DELEGATED_PASSWORD` | Senha da conta de serviço acima.                                                                                       |
+| `PBI_PUBLISHED_NAME` | Prefixo dos itens publicados (`<prefixo> - <unidade>`). Padrão: `Painel Financeiro Executivo`. Mudar cria itens novos. |
+| `REFRESH_NOTIFY_OPTION` | Notificação de falha do refresh agendado: `MailOnFailure` (padrão) ou `NoNotification`. Ver seção 10.            |
+| `DELEGATED_USER`     | E-mail da conta delegada (ROPC, sem MFA). Usada só para tentar aplicar `MailOnFailure` no agendamento (seção 10).      |
+| `DELEGATED_PASSWORD` | Senha da conta delegada acima.                                                                                         |
 
-> As variáveis delegadas (`DELEGATED_USER`/`DELEGATED_PASSWORD`) **não são
-> usadas** no fluxo principal hoje. Existem para um futuro fluxo de
-> configuração automática de credenciais SharePoint.
+> As **credenciais das fontes de dados** (SharePoint etc.) são configuradas
+> manualmente no Power BI Service. O pipeline não as altera:
+> `configurar_credenciais_sharepoint` existe no código, mas não é chamada.
 
 ### Formato do arquivo
 
@@ -422,6 +437,12 @@ CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 CLIENT_SECRET=sua-chave-secreta-aqui
 WORKSPACE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 URL_ENCRYPTION_KEY=sua-chave-de-criptografia-aqui
+
+# Opcionais
+PBI_PUBLISHED_NAME=Painel Financeiro Executivo
+REFRESH_NOTIFY_OPTION=MailOnFailure
+DELEGATED_USER=conta.servico@dominio.org
+DELEGATED_PASSWORD=senha-da-conta-delegada
 ```
 
 > Sem aspas, sem espaços ao redor do `=`, uma variável por linha.
@@ -460,12 +481,12 @@ O que cada `.bat` faz automaticamente:
 
 | Etapa   | Nome                   | O que faz                                                                                          |
 | ------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
-| Etapa 0 | Pré-requisitos         | Valida `.env`, templates e as planilhas **do modo escolhido**, e garante que `build/`, `logs/` e `sql/` existam. |
+| Etapa 0 | Pré-requisitos         | Valida `.env` (incl. `REFRESH_NOTIFY_OPTION`), a descoberta do template (um único par) e as planilhas **do modo escolhido**, e garante que `build/`, `logs/` e `sql/` existam. |
 | Etapa 1 | Autenticação           | Obtém token OAuth2 do Azure AD usando o Service Principal (Client Credentials).                     |
 | Etapa 2 | Inspeção do workspace  | Lista todos os itens existentes no workspace Fabric para decidir se criará ou atualizará cada um.   |
 | Fase 1  | Modelos semânticos     | Clona o template, compila um modelo semântico por unidade (gestão ou líder) e faz upload via Fabric Items API. |
 | Fase 2  | Relatórios vinculados  | Ajusta a referência ao modelo semântico publicado e faz upload do relatório via Fabric Items API.   |
-| Fase 3  | Pós-deploy             | Executa TakeOver (posse do dataset pelo SPN), configura agendamento de refresh e dispara refresh inicial. |
+| Fase 3  | Pós-deploy             | Executa TakeOver (posse do dataset pelo SPN), configura agendamento de refresh (com a política de notificação da seção 10) e dispara refresh inicial. |
 | Final   | Resumo e SQL           | Exibe tabela com resumo executivo, salva log JSON em `logs/` e gera SQL em `sql/` (se o cadastro de usuários Lovable existir em `data/`). |
 
 ---
@@ -477,7 +498,7 @@ Após a execução, o pipeline produz:
 | Pasta    | Conteúdo                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------- |
 | `build/` | Artefatos compilados (uma pasta `.SemanticModel` e uma `.Report` por unidade). Pode ser ignorada pelo usuário, pois é intermediária. |
-| `logs/`  | Arquivo JSON por execução (`deploy_<modo>_YYYYMMDD_HHMMSS.json`) com log detalhado de cada fase, tempos e erros. |
+| `logs/`  | Arquivo JSON por execução (`deploy_<modo>_YYYYMMDD_HHMMSS.json`) com log detalhado de cada fase, tempos e erros, o `notifyOption` aplicado por unidade (`fase3[]`) e os avisos de fallback (`avisos`). |
 | `sql/`   | `carga_user_dashboards_{modo}.sql` (ex.: `carga_user_dashboards_gestao.sql`, `carga_user_dashboards_lideres.sql`): script SQL para carga de usuarios no banco de dados (gerado apenas se o cadastro de usuários Lovable existir em `data/`; um arquivo por modo executado). |
 
 ---
@@ -540,8 +561,39 @@ dataset após a execução do pipeline.
 > dispara o refresh. Após cada execução, basta repetir o passo de assumir o
 > controle pelo portal se quiser manter o gerenciamento pela interface.
 
+### Notificação de falha de refresh e fallback
+
+O padrão é `REFRESH_NOTIFY_OPTION=MailOnFailure` (e-mail ao dono quando o refresh
+agendado falha). Limitações da API (Microsoft Learn, *Datasets - Update Refresh
+Schedule In Group*): service principals **só suportam `NoNotification`**, e o
+chamador precisa ser o **dono** do dataset.
+
+Como o dono é o SPN (por causa do TakeOver), o pipeline faz assim, por dataset:
+
+1. Com `MailOnFailure`, tenta o agendamento com o **token delegado**
+   (`DELEGATED_USER`/`DELEGATED_PASSWORD`).
+2. Se falhar por qualquer motivo (token delegado indisponível, 401/403, usuário
+   delegado sem permissão sobre um dataset do SPN), registra um **aviso** e refaz
+   a chamada com `NoNotification` usando o token do SPN. O agendamento **sempre
+   fica ativo**.
+3. O `notifyOption` efetivamente aplicado aparece por unidade na tabela da
+   Fase 3, no resumo final e no log JSON (`fase3[].notify_option`, `avisos`).
+
+> **Não há garantia de que o token delegado funcione sobre datasets do SPN.**
+> Se o fallback ocorrer, a notificação precisa ser configurada no Power BI
+> Service pelo dono do modelo (depois de assumir o controle, passo acima:
+> *Configurações do modelo > Atualização agendada > Enviar notificações de falha
+> de atualização*). Lembre que a próxima execução do pipeline reassume a posse
+> e reaplica o agendamento.
+
+O refresh imediato disparado ao final continua com `NoNotification`: a
+documentação do endpoint informa que `notifyOption` não se aplica a operações
+feitas por service principal.
+
 ### Referências
 
+- [Datasets - Update Refresh Schedule In Group (Microsoft Docs)](https://learn.microsoft.com/en-us/rest/api/power-bi/datasets/update-refresh-schedule-in-group)
+- [Datasets - Refresh Dataset In Group (Microsoft Docs)](https://learn.microsoft.com/en-us/rest/api/power-bi/datasets/refresh-dataset-in-group)
 - [Datasets - Take Over In Group (Microsoft Docs)](https://learn.microsoft.com/en-us/rest/api/power-bi/datasets/take-over-in-group)
 - [Configurar atualização agendada (Microsoft Docs)](https://learn.microsoft.com/en-us/power-bi/connect-data/refresh-scheduled-refresh)
 
