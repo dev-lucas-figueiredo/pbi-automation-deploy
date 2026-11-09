@@ -134,15 +134,13 @@ das fases.
   a mensagem, exibida na Etapa 0 (`prerequisites.py`).
 - O nome dos itens publicados adota dinamicamente o próprio nome-base do
   template descoberto em `template/` (ex.: `Painel Financeiro Executivo - 2.0`).
-  Se `PBI_PUBLISHED_NAME` for definido no `.env`, ele sobrescreve essa regra.
-  O upload casa itens por `displayName` + tipo: mudar este valor cria itens novos
-  no workspace em vez de atualizar os existentes. `PBI_PROJECT_NAME` foi removido.
+  O upload casa itens por `displayName` + tipo: mudar o nome do template cria itens novos
+  no workspace em vez de atualizar os existentes. `PBI_PROJECT_NAME` e `PBI_PUBLISHED_NAME` foram removidos.
 - `builder._clonar_template` copia o template para `build/<nome publicado>.*` e
   reescreve `metadata.displayName` do `.platform`. O `byPath` do
   `definition.pbir` do Report é substituído por `byConnection` na Fase 2
   (`fix_report_cloud_reference`), então o nome da pasta do template não importa.
-- Variáveis opcionais: `PBI_PUBLISHED_NAME`, `REFRESH_NOTIFY_OPTION`,
-  `DELEGATED_USER`, `DELEGATED_PASSWORD`. Exemplo de `.env` no README.md.
+- Variáveis opcionais: `REFRESH_NOTIFY_OPTION`, `DELEGATED_USER`, `DELEGATED_PASSWORD`. Exemplo de `.env` no README.md.
 
 ### Notificação de falha de refresh
 

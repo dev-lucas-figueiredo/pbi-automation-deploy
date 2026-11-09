@@ -69,10 +69,8 @@ BASE_SEMANTIC_MODEL, BASE_REPORT, TEMPLATE_ERRO = descobrir_template(TEMPLATE_DI
 TEMPLATE_BASE_NAME = extrair_nome_template(BASE_SEMANTIC_MODEL)
 
 # Prefixo dos itens publicados no workspace e gerados no build/.
-# Alternativa dinamica: se PBI_PUBLISHED_NAME nao estiver definido no .env,
-# utiliza automaticamente o proprio nome-base do template (ex.: 'Painel Financeiro Executivo - 2.0').
-_env_published_name = os.getenv("PBI_PUBLISHED_NAME", "").strip()
-PBI_PUBLISHED_NAME = _env_published_name or TEMPLATE_BASE_NAME or "Painel Financeiro Executivo"
+# Vem sempre exclusivamente do nome-base do template descoberto em template/.
+PBI_PUBLISHED_NAME = TEMPLATE_BASE_NAME
 
 # Notificacao por e-mail de falha do refresh agendado. SPN so suporta
 # NoNotification; MailOnFailure exige o token delegado (ver powerbi.py).

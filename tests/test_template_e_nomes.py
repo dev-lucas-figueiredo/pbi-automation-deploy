@@ -108,7 +108,7 @@ def test_nome_publicado_dinamico_do_template(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "BASE_REPORT", str(relatorio))
     monkeypatch.setattr(config, "TEMPLATE_ERRO", None)
     monkeypatch.setattr(config, "BUILD_DIR", str(tmp_path / "build"))
-    monkeypatch.setattr(config, "PBI_PUBLISHED_NAME", None)
+    monkeypatch.setattr(config, "PBI_PUBLISHED_NAME", config.extrair_nome_template(str(modelo)))
     (tmp_path / "build").mkdir()
 
     nome, pasta_modelo, pasta_report = builder.clone_and_compile_gestao("DAF")

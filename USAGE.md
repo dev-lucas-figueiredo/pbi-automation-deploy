@@ -175,10 +175,10 @@ Ao salvar, o Power BI Desktop cria automaticamente três itens:
 - Não renomeie os sufixos `.SemanticModel` e `.Report`: o pipeline depende deles
   para localizar os artefatos.
 - O **nome dos itens publicados** adota dinamicamente o próprio nome-base do
-  template descoberto em `template/` (formato `<nome_template> - <unidade>`), a menos
-  que você defina a variável `PBI_PUBLISHED_NAME` no `.env` para fixar um prefixo.
-  O upload atualiza itens com o mesmo nome e cria itens novos para nomes diferentes:
-  alterar o prefixo gera itens novos no workspace.
+  template descoberto em `template/` (formato `<nome_template> - <unidade>`),
+  sem necessidade de variável de configuração no `.env`. O upload atualiza itens
+  com o mesmo nome e cria itens novos para nomes diferentes: alterar o nome do
+  template gera itens novos no workspace.
 
 ### 4.3. Atualizando o template
 
@@ -409,7 +409,6 @@ compartilhado ou versionado** (já está no `.gitignore`).
 
 | Variável             | Descrição                                                                                                              |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `PBI_PUBLISHED_NAME` | Prefixo dos itens publicados (`<prefixo> - <unidade>`). Opcional: por padrão, assume o nome do template. Mudar cria itens novos. |
 | `REFRESH_NOTIFY_OPTION` | Notificação de falha do refresh agendado: `MailOnFailure` (padrão) ou `NoNotification`. Ver seção 10.            |
 | `DELEGATED_USER`     | E-mail da conta delegada (ROPC, sem MFA). Usada só para tentar aplicar `MailOnFailure` no agendamento (seção 10).      |
 | `DELEGATED_PASSWORD` | Senha da conta delegada acima.                                                                                         |
@@ -427,8 +426,7 @@ CLIENT_SECRET=sua-chave-secreta-aqui
 WORKSPACE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 URL_ENCRYPTION_KEY=sua-chave-de-criptografia-aqui
 
-# Opcionais (PBI_PUBLISHED_NAME assume o nome do template se omitido)
-# PBI_PUBLISHED_NAME=Painel Financeiro Executivo - 2.0
+# Opcionais
 REFRESH_NOTIFY_OPTION=MailOnFailure
 DELEGATED_USER=conta.servico@dominio.org
 DELEGATED_PASSWORD=senha-da-conta-delegada

@@ -68,10 +68,12 @@ def _ajustar_display_name(pasta_item, nome_publicado):
 
 
 def _obter_prefixo_publicado():
-    """Retorna o prefixo publicado: PBI_PUBLISHED_NAME ou o nome-base dinamico do template."""
-    if config.PBI_PUBLISHED_NAME:
-        return config.PBI_PUBLISHED_NAME
-    return config.extrair_nome_template(config.BASE_SEMANTIC_MODEL) or "Painel Financeiro Executivo"
+    """Retorna o prefixo publicado derivado exclusivamente do template."""
+    return (
+        config.PBI_PUBLISHED_NAME
+        or config.extrair_nome_template(config.BASE_SEMANTIC_MODEL)
+        or "Painel Financeiro Executivo"
+    )
 
 
 def clone_and_compile_gestao(gestao_name):

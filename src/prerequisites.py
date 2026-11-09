@@ -72,8 +72,7 @@ def verificar_pre_requisitos(mode):
                 tabela.add_row(label, "[red]FALTA[/red]", f"Nao encontrado: {caminho}")
                 tudo_ok = False
 
-    origem_nome = " (.env)" if os.getenv("PBI_PUBLISHED_NAME") else " (dinamico do template)"
-    tabela.add_row("Nome publicado", "[green]OK[/green]", f"{config.PBI_PUBLISHED_NAME}{origem_nome}")
+    tabela.add_row("Nome publicado", "[green]OK[/green]", config.PBI_PUBLISHED_NAME or "N/A")
 
     if not os.path.exists(config.EXCEL_INPUT_PATH):
         tabela.add_row("Planilha de entrada", "[red]FALTA[/red]", f"Nao encontrada: {config.EXCEL_INPUT_PATH}")
