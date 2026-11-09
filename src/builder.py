@@ -67,9 +67,16 @@ def _ajustar_display_name(pasta_item, nome_publicado):
         json.dump(platform, f, ensure_ascii=False, indent=2)
 
 
+def _obter_prefixo_publicado():
+    """Retorna o prefixo publicado: PBI_PUBLISHED_NAME ou o nome-base dinamico do template."""
+    if config.PBI_PUBLISHED_NAME:
+        return config.PBI_PUBLISHED_NAME
+    return config.extrair_nome_template(config.BASE_SEMANTIC_MODEL) or "Painel Financeiro Executivo"
+
+
 def clone_and_compile_gestao(gestao_name):
     """Clona o template para a gestao e injeta o filtro de RESPONSAVEL no report."""
-    new_filename = f"{config.PBI_PUBLISHED_NAME} - {gestao_name}"
+    new_filename = f"{_obter_prefixo_publicado()} - {gestao_name}"
     target_semantic_folder, target_report_folder = _clonar_template(new_filename)
 
     report_json_path = os.path.join(target_report_folder, "definition", "report.json")
@@ -153,7 +160,7 @@ def clone_and_compile_lider(lider_name, doacoes):
     casar com a coluna dDoação.DOAÇÃO do modelo. O filtro report-level fica
     travado em modo de visualizacao (isLockedInViewMode).
     """
-    new_filename = f"{config.PBI_PUBLISHED_NAME} - {lider_name}"
+    new_filename = f"{_obter_prefixo_publicado()} - {lider_name}"
     target_semantic_folder, target_report_folder = _clonar_template(new_filename)
 
     report_json_path = os.path.join(target_report_folder, "definition", "report.json")

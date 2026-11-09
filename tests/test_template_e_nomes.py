@@ -96,3 +96,22 @@ def test_clone_sem_template_levanta_erro_claro(monkeypatch):
     monkeypatch.setattr(config, "TEMPLATE_ERRO", "sem template")
     with pytest.raises(ValueError, match="sem template"):
         builder.clone_and_compile_lider("X", ["Y"])
+
+
+def test_nome_publicado_dinamico_do_template(tmp_path, monkeypatch):
+    template = tmp_path / "template"
+    template.mkdir()
+    modelo, relatorio = _criar_par(template, "Painel Dinamico 2026")
+    (relatorio / "definition").mkdir()
+    (relatorio / "definition" / "report.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(config, "BASE_SEMANTIC_MODEL", str(modelo))
+    monkeypatch.setattr(config, "BASE_REPORT", str(relatorio))
+    monkeypatch.setattr(config, "TEMPLATE_ERRO", None)
+    monkeypatch.setattr(config, "BUILD_DIR", str(tmp_path / "build"))
+    monkeypatch.setattr(config, "PBI_PUBLISHED_NAME", None)
+    (tmp_path / "build").mkdir()
+
+    nome, pasta_modelo, pasta_report = builder.clone_and_compile_gestao("DAF")
+    assert nome == "Painel Dinamico 2026 - DAF"
+    assert pasta_modelo.endswith("Painel Dinamico 2026 - DAF.SemanticModel")
+    assert pasta_report.endswith("Painel Dinamico 2026 - DAF.Report")

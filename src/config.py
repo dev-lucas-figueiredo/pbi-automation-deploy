@@ -21,55 +21,10 @@ URL_ENCRYPTION_KEY = os.getenv("URL_ENCRYPTION_KEY")
 DELEGATED_USER = os.getenv("DELEGATED_USER")
 DELEGATED_PASSWORD = os.getenv("DELEGATED_PASSWORD")
 
-# Prefixo dos itens publicados no workspace. Independe do nome do arquivo do
-# template: o upload casa itens por displayName, entao mudar este valor cria
-# itens novos em vez de atualizar os existentes.
-PBI_PUBLISHED_NAME = os.getenv("PBI_PUBLISHED_NAME", "Painel Financeiro Executivo")
-
-# Notificacao por e-mail de falha do refresh agendado. SPN so suporta
-# NoNotification; MailOnFailure exige o token delegado (ver powerbi.py).
-NOTIFY_OPTIONS_VALIDAS = ("MailOnFailure", "NoNotification")
-_notify_bruto = os.getenv("REFRESH_NOTIFY_OPTION", "MailOnFailure").strip()
-# Valor invalido e mantido como veio para prerequisites.py reportar o erro.
-REFRESH_NOTIFY_OPTION = next(
-    (o for o in NOTIFY_OPTIONS_VALIDAS if o.lower() == _notify_bruto.lower()), _notify_bruto
-)
-
 TEMPLATE_DIR = "template"
 BUILD_DIR = "build"
 LOG_DIR = "logs"
 SQL_DIR = "sql"
-
-# Planilha unica de dados de entrada do pipeline (nunca versionada no git)
-EXCEL_INPUT_PATH = os.path.join("data", "dados_entrada.xlsx")
-
-# Nomes padronizados das abas na planilha unica de entrada
-SHEET_GESTAO_AREAS = "Gestão - Áreas"
-SHEET_GESTAO_SCHEDULE = "Gestão - Agendamento"
-SHEET_GESTAO_USUARIOS = "Gestão - Usuários"
-
-SHEET_LIDERES_DOACOES = "Líderes - Doações"
-SHEET_LIDERES_SCHEDULE = "Líderes - Agendamento"
-SHEET_LIDERES_USUARIOS = "Líderes - Usuários"
-
-# Mapeamentos de abas por modo
-SCHEDULE_ABAS = {
-    "gestao": SHEET_GESTAO_SCHEDULE,
-    "lideres": SHEET_LIDERES_SCHEDULE,
-}
-
-USER_DASHBOARDS_ABAS = {
-    "gestao": SHEET_GESTAO_USUARIOS,
-    "lideres": SHEET_LIDERES_USUARIOS,
-}
-
-# Aliases de compatibilidade
-EXCEL_FILE_PATH = EXCEL_INPUT_PATH
-REFRESH_SCHEDULE_PATH = EXCEL_INPUT_PATH
-LIDERES_PROJETO_PATH = EXCEL_INPUT_PATH
-LIDERES_REFRESH_SCHEDULE_PATH = EXCEL_INPUT_PATH
-USER_DASHBOARDS_PATH = EXCEL_INPUT_PATH
-
 
 
 def descobrir_template(template_dir):
@@ -100,7 +55,63 @@ def descobrir_template(template_dir):
     return str(pasta / modelos[0]), str(pasta / relatorios[0]), None
 
 
+def extrair_nome_template(caminho_modelo):
+    """Extrai o nome-base do template a partir da pasta .SemanticModel."""
+    if not caminho_modelo:
+        return None
+    nome = Path(caminho_modelo).name
+    if nome.endswith(".SemanticModel"):
+        return nome[: -len(".SemanticModel")]
+    return nome
+
+
 BASE_SEMANTIC_MODEL, BASE_REPORT, TEMPLATE_ERRO = descobrir_template(TEMPLATE_DIR)
+TEMPLATE_BASE_NAME = extrair_nome_template(BASE_SEMANTIC_MODEL)
+
+# Prefixo dos itens publicados no workspace e gerados no build/.
+# Alternativa dinamica: se PBI_PUBLISHED_NAME nao estiver definido no .env,
+# utiliza automaticamente o proprio nome-base do template (ex.: 'Painel Financeiro Executivo - 2.0').
+_env_published_name = os.getenv("PBI_PUBLISHED_NAME", "").strip()
+PBI_PUBLISHED_NAME = _env_published_name or TEMPLATE_BASE_NAME or "Painel Financeiro Executivo"
+
+# Notificacao por e-mail de falha do refresh agendado. SPN so suporta
+# NoNotification; MailOnFailure exige o token delegado (ver powerbi.py).
+NOTIFY_OPTIONS_VALIDAS = ("MailOnFailure", "NoNotification")
+_notify_bruto = os.getenv("REFRESH_NOTIFY_OPTION", "MailOnFailure").strip()
+# Valor invalido e mantido como veio para prerequisites.py reportar o erro.
+REFRESH_NOTIFY_OPTION = next(
+    (o for o in NOTIFY_OPTIONS_VALIDAS if o.lower() == _notify_bruto.lower()), _notify_bruto
+)
+
+# Planilha unica de dados de entrada do pipeline (nunca versionada no git)
+EXCEL_INPUT_PATH = os.path.join("data", "dados_entrada.xlsx")
+
+# Nomes padronizados das abas na planilha unica de entrada
+SHEET_GESTAO_AREAS = "Gestão - Áreas"
+SHEET_GESTAO_SCHEDULE = "Gestão - Agendamento"
+SHEET_GESTAO_USUARIOS = "Gestão - Usuários"
+
+SHEET_LIDERES_DOACOES = "Líderes - Doações"
+SHEET_LIDERES_SCHEDULE = "Líderes - Agendamento"
+SHEET_LIDERES_USUARIOS = "Líderes - Usuários"
+
+# Mapeamentos de abas por modo
+SCHEDULE_ABAS = {
+    "gestao": SHEET_GESTAO_SCHEDULE,
+    "lideres": SHEET_LIDERES_SCHEDULE,
+}
+
+USER_DASHBOARDS_ABAS = {
+    "gestao": SHEET_GESTAO_USUARIOS,
+    "lideres": SHEET_LIDERES_USUARIOS,
+}
+
+# Aliases de compatibilidade
+EXCEL_FILE_PATH = EXCEL_INPUT_PATH
+REFRESH_SCHEDULE_PATH = EXCEL_INPUT_PATH
+LIDERES_PROJETO_PATH = EXCEL_INPUT_PATH
+LIDERES_REFRESH_SCHEDULE_PATH = EXCEL_INPUT_PATH
+USER_DASHBOARDS_PATH = EXCEL_INPUT_PATH
 
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}" if TENANT_ID else None
 SCOPE_PBI = ["https://analysis.windows.net/powerbi/api/.default"]

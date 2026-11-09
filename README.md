@@ -39,9 +39,9 @@ DELEGATED_PASSWORD=...
 ```
 
 - **Template:** qualquer nome. O pipeline localiza a única pasta `*.SemanticModel`
-  e a única `*.Report` em `template/`. O nome dos itens publicados é
-  `PBI_PUBLISHED_NAME` + ` - <unidade>`, estável mesmo se o template mudar de nome.
-  Alterar `PBI_PUBLISHED_NAME` cria itens novos no workspace (o upload casa por nome).
+  e a única `*.Report` em `template/`. O nome dos itens publicados adota dinamicamente
+  o nome do template + ` - <unidade>` (ou `PBI_PUBLISHED_NAME` caso definido no `.env`).
+  Alterar esse prefixo cria itens novos no workspace (o upload casa por nome).
 - **Notificação de falha de refresh:** com `MailOnFailure` o agendamento é tentado
   com a conta delegada; se não for possível (ex.: o dataset pertence ao SPN), o
   pipeline avisa e mantém o agendamento com `NoNotification`. Ver

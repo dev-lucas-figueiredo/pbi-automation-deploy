@@ -132,10 +132,11 @@ das fases.
   A descoberta **não levanta exceção no import**: em caso de zero/vários pares,
   `BASE_SEMANTIC_MODEL`/`BASE_REPORT` ficam `None` e `config.TEMPLATE_ERRO` traz
   a mensagem, exibida na Etapa 0 (`prerequisites.py`).
-- O nome dos itens publicados vem de `PBI_PUBLISHED_NAME` (padrão `Painel
-  Financeiro Executivo`), **independente** do nome do template. O upload casa
-  itens por `displayName` + tipo: mudar este valor cria itens novos em vez de
-  atualizar os existentes. `PBI_PROJECT_NAME` foi removido.
+- O nome dos itens publicados adota dinamicamente o próprio nome-base do
+  template descoberto em `template/` (ex.: `Painel Financeiro Executivo - 2.0`).
+  Se `PBI_PUBLISHED_NAME` for definido no `.env`, ele sobrescreve essa regra.
+  O upload casa itens por `displayName` + tipo: mudar este valor cria itens novos
+  no workspace em vez de atualizar os existentes. `PBI_PROJECT_NAME` foi removido.
 - `builder._clonar_template` copia o template para `build/<nome publicado>.*` e
   reescreve `metadata.displayName` do `.platform`. O `byPath` do
   `definition.pbir` do Report é substituído por `byConnection` na Fase 2
