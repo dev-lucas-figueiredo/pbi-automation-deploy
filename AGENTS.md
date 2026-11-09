@@ -16,7 +16,7 @@ agendamento/refresh. Há **dois modos**, cada um com seu `.bat`:
   `dDoação.DOAÇÃO` com as doações daquele líder. Fonte:
   aba `Líderes - Doações` em `data/dados_entrada.xlsx`.
 
-O modo é passado como argumento (`python -m pbi_deploy.main <gestao|lideres>`);
+O modo é passado como argumento (`python -m src.main <gestao|lideres>`);
 o usuário final só dá duplo clique no `.bat` do modo desejado, sem CLI.
 
 Visão geral e arquitetura estão no [README.md](README.md); detalhes de uso
@@ -25,17 +25,17 @@ arquivo trata de **como editar o código**.
 
 ## Risco real: leia antes de executar
 
-`pbi_deploy.main` faz deploy de verdade em um workspace Fabric/Power BI de
+`src.main` faz deploy de verdade em um workspace Fabric/Power BI de
 produção e dispara refresh real dos datasets. **Não execute o pipeline
-fim-a-fim ("python -m pbi_deploy.main" ou o `.bat`) para validar uma mudança**
+fim-a-fim ("python -m src.main" ou o `.bat`) para validar uma mudança**
 a menos que o usuário peça explicitamente. Para validar alterações, prefira:
 
 ```bat
-env\Scripts\python.exe -c "import ast; ast.parse(open('pbi_deploy/arquivo.py', encoding='utf-8').read())"
-env\Scripts\python.exe -c "import pbi_deploy.main"
+env\Scripts\python.exe -c "import ast; ast.parse(open('src/arquivo.py', encoding='utf-8').read())"
+env\Scripts\python.exe -c "import src.main"
 ```
 
-Rodar `python -m pbi_deploy.main` sem argumento (ou com modo inválido) só imprime
+Rodar `python -m src.main` sem argumento (ou com modo inválido) só imprime
 o uso e sai com código 2, sem tocar a API, então é seguro para checar o parse dos
 argumentos.
 
@@ -48,11 +48,11 @@ Rode-a depois de mexer em `config.py`, `builder.py`, `powerbi.py` ou `pipeline.p
 
 ## Arquitetura
 
-Pacote `pbi_deploy/`, uma responsabilidade por módulo:
+Pacote `src/`, uma responsabilidade por módulo:
 
 ```
-pbi_deploy/
-├── main.py            Entrypoint (python -m pbi_deploy.main). Chamado pelo .bat.
+src/
+├── main.py            Entrypoint (python -m src.main). Chamado pelo .bat.
 ├── config.py           Env vars (.env), caminhos, constantes. Sem imports internos.
 ├── console.py          Console rich compartilhado, mask(), banner(). Sem imports internos.
 ├── errors.py            APIError, parse_body_safe(). Sem imports internos.

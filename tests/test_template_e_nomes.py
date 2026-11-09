@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from pbi_deploy import builder, config
+from src import builder, config
 
 
 def _criar_par(base, nome_modelo, nome_relatorio=None):

@@ -4,8 +4,8 @@ import importlib
 
 import pytest
 
-from pbi_deploy import config, powerbi
-from pbi_deploy.errors import APIError
+from src import config, powerbi
+from src.errors import APIError
 
 
 class RespostaFalsa:

@@ -366,7 +366,7 @@ def run(mode):
     if mode not in MODOS:
         console.print(
             "[red bold]Modo invalido ou ausente.[/red bold] "
-            "Uso: python -m pbi_deploy.main <gestao|lideres>"
+            "Uso: python -m src.main <gestao|lideres>"
         )
         sys.exit(2)
     try:

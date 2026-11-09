@@ -29,8 +29,8 @@ if not exist ".env" (
 )
 
 REM ---- 3. Verificar pacote Python ----
-if not exist "pbi_deploy\main.py" (
-    echo [ERRO] pbi_deploy\main.py nao encontrado no diretorio atual.
+if not exist "src\main.py" (
+    echo [ERRO] src\main.py nao encontrado no diretorio atual.
     echo.
     pause
     exit /b 1
@@ -70,7 +70,7 @@ if errorlevel 1 (
 REM ---- 7. Executar pipeline (modo gestao) ----
 echo [4/4] Executando pipeline (modo GESTAO)...
 echo.
-python -m pbi_deploy.main gestao
+python -m src.main gestao
 set EXIT_CODE=%errorlevel%
 
 echo.

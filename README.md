@@ -88,8 +88,8 @@ fase a fase em [USAGE.md § 8](USAGE.md#8-o-que-acontece-em-cada-etapa).
 
 ## Arquitetura do código
 
-A lógica é um pacote modular. Cada `.bat` chama `pbi_deploy/main.py` (via
-`python -m pbi_deploy.main <gestao|lideres>`), que apenas delega para o
+A lógica é um pacote modular. Cada `.bat` chama `src/main.py` (via
+`python -m src.main <gestao|lideres>`), que apenas delega para o
 orquestrador. Cada módulo tem uma responsabilidade única, um desenho pensado
 para manutenção, inclusive por agentes de IA. Detalhes de convenções para
 agentes estão em [AGENTS.md](AGENTS.md).
@@ -98,7 +98,7 @@ agentes estão em [AGENTS.md](AGENTS.md).
 run_deploy_gestao.bat     Entrada do usuário final (modo gestão).
 run_deploy_lideres.bat    Entrada do usuário final (modo líderes).
 
-pbi_deploy/
+src/
 ├── __init__.py           Documentação do pacote e atalho main().
 ├── main.py               Entrypoint fino: lê o modo do argv e delega para pipeline.run.
 ├── config.py             Variáveis de ambiente, caminhos e constantes.
@@ -135,8 +135,8 @@ para uma nova fase, use `runner.executar_fase` dentro de `pipeline.py`.
 ```bat
 env\Scripts\activate
 pip install -r requirements.txt
-python -m pbi_deploy.main gestao
-python -m pbi_deploy.main lideres
+python -m src.main gestao
+python -m src.main lideres
 ```
 
 > Sem argumento (ou com um modo inválido), o pipeline só imprime o uso e sai

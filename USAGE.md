@@ -117,7 +117,7 @@ pbi-automation-deploy/
 │   └── <nome do template>.Report/        (exatamente uma, mesmo nome-base)
 │
 ├── env/                                 ← ambiente virtual Python (já incluído)
-├── pbi_deploy/                          ← código do pipeline (não alterar)
+├── src/                                 ← código do pipeline (não alterar)
 │
 ├── build/                               ← já incluída (inicialmente vazia, recebe relatórios gerados)
 ├── logs/                                ← já incluída (inicialmente vazia, recebe os logs de execução)
@@ -452,12 +452,12 @@ do modo desejado:
 
 O que cada `.bat` faz automaticamente:
 
-1. Verifica se `env/`, `.env` e `pbi_deploy/main.py` existem.
+1. Verifica se `env/`, `.env` e `src/main.py` existem.
 2. Ativa o ambiente virtual já incluído na pasta `env/`.
 3. Verifica se a biblioteca `rich` está instalada (instala se necessário).
 4. Instala/atualiza as demais dependências de `requirements.txt`.
 5. Executa o pipeline Python no modo do `.bat`
-   (`python -m pbi_deploy.main gestao` ou `... lideres`).
+   (`python -m src.main gestao` ou `... lideres`).
 6. Exibe o resultado final (**SUCESSO**, **PARCIAL** ou **FALHA**) e aguarda
    `Enter`.
 

@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from pbi_deploy import builder, config, pipeline
+from src import builder, config, pipeline
 
 
 @pytest.fixture

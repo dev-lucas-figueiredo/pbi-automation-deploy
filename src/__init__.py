@@ -1,11 +1,11 @@
 """Pipeline de publicacao de modelos e relatorios Power BI / Microsoft Fabric.
 
 Pacote modular do deploy. O ponto de entrada para o usuario final e
-`pbi_deploy/main.py` (chamado pelo run_deploy.bat via `python -m
-pbi_deploy.main`), que apenas delega para `pbi_deploy.pipeline.run`.
+`src/main.py` (chamado pelos arquivos .bat via `python -m src.main`), que
+apenas delega para `src.pipeline.run`.
 
 Mapa de modulos:
-    main           Entrypoint executavel (python -m pbi_deploy.main).
+    main           Entrypoint executavel (python -m src.main).
     config         Configuracao: variaveis de ambiente, caminhos e constantes.
     console        Saida visual (rich): console, mascaramento e banners.
     errors         APIError e utilitarios de parsing de resposta.
