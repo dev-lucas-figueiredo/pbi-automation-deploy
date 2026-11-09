@@ -183,7 +183,6 @@ das fases.
   e `url_painel` são lidas; as demais (identificação, fórmulas) são ignoradas e
   linhas incompletas são descartadas. O arquivo contém senhas em texto plano e
   está no `.gitignore` (`data/Cadastro*.xlsx`); **nunca** o adicione ao git.
-  O antigo `data/user_dashboards.xlsx` foi aposentado por este cadastro.
 
 ### Modo gestão (RESPONSAVEL)
 

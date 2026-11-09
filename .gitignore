@@ -12,7 +12,6 @@ template/*
 !template/.gitkeep
 
 # Arquivos de dados com credenciais (nunca versionar)
-data/user_dashboards.xlsx
 data/Cadastro*.xlsx
 
 # Arquivos gerados pelo Python
