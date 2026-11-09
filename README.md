@@ -54,17 +54,20 @@ DELEGATED_PASSWORD=...
 
 ---
 
-## Planilhas de entrada (`data/`)
+## Planilha única de entrada (`data/dados_entrada.xlsx`)
 
-| Arquivo                         | Modo    | Obrigatório | Função                                                             |
-| ------------------------------- | ------- | :---------: | ----------------------------------------------------------------- |
-| `gestao_areas.xlsx`             | gestão  |     Sim     | Lista de gestões (`RESPONSAVEL`, `SUPERINTENDÊNCIA`).              |
-| `refresh_schedule_gestao.xlsx`  | gestão  |     Sim     | Horários de refresh por gestão (`gestor`, `horarios`).            |
-| `lideres_projeto.xlsx`          | líderes |     Sim     | Mapeamento líder -> doações (`lider`, `email`, `doacao`).          |
-| `refresh_schedule_lideres.xlsx` | líderes |     Sim     | Horários de refresh por líder (`lider`, `horarios`).              |
-| `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx` | ambos | Não | Cadastro de logins (baixado do OneDrive da FAS; uma aba por modo). Gera `sql/carga_user_dashboards_{modo}.sql`. **Nunca versionar.** |
+Toda a configuração de entrada do pipeline fica centralizada em um único arquivo: **`data/dados_entrada.xlsx`** (ignorado pelo git, pois contém credenciais e dados operacionais).
 
-> Cada modo só exige as planilhas do seu par. Colunas obrigatórias, exemplos e
+| Aba                     | Modo    | Obrigatório | Função                                                             |
+| ----------------------- | ------- | :---------: | ----------------------------------------------------------------- |
+| `Gestão - Áreas`        | gestão  |     Sim     | Lista de gestões (`GestaoKey`, `RESPONSAVEL`, `SUPERINTENDÊNCIA`).  |
+| `Gestão - Agendamento`  | gestão  |     Sim     | Horários de refresh por gestão (`gestor`, `horarios`).            |
+| `Gestão - Usuários`     | gestão  |     Não     | Logins do Lovable para gestão. Gera `sql/carga_user_dashboards_gestao.sql`. |
+| `Líderes - Doações`     | líderes |     Sim     | Mapeamento líder para doações (`lider`, `doacao`).                |
+| `Líderes - Agendamento` | líderes |     Sim     | Horários de refresh por líder (`lider`, `horarios`).              |
+| `Líderes - Usuários`    | líderes |     Não     | Logins do Lovable para líderes. Gera `sql/carga_user_dashboards_lideres.sql`. |
+
+> Cada modo só exige as abas correspondentes. Colunas obrigatórias, exemplos e
 > regras especiais: ver [USAGE.md § 5](USAGE.md#5-planilhas-de-entrada-pasta-data).
 
 ---

@@ -74,27 +74,42 @@ def verificar_pre_requisitos(mode):
 
     tabela.add_row("Nome publicado", "[green]OK[/green]", config.PBI_PUBLISHED_NAME)
 
-    caminhos = []
-    if mode == "gestao":
-        caminhos += [
-            (config.EXCEL_FILE_PATH, "Planilha de gestores"),
-            (config.REFRESH_SCHEDULE_PATH, "Planilha de agendamento"),
-        ]
+    if not os.path.exists(config.EXCEL_INPUT_PATH):
+        tabela.add_row("Planilha de entrada", "[red]FALTA[/red]", f"Nao encontrada: {config.EXCEL_INPUT_PATH}")
+        tudo_ok = False
     else:
-        caminhos += [
-            (config.LIDERES_PROJETO_PATH, "Planilha de lideres/doacoes"),
-            (config.LIDERES_REFRESH_SCHEDULE_PATH, "Planilha de agendamento"),
-        ]
-    for caminho, label in caminhos:
-        if os.path.exists(caminho):
-            tabela.add_row(label, "[green]OK[/green]", caminho)
-        else:
-            tabela.add_row(label, "[red]FALTA[/red]", f"Nao encontrado: {caminho}")
-            tudo_ok = False
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(config.EXCEL_INPUT_PATH, read_only=True)
+            abas = wb.sheetnames
+            wb.close()
 
-    # O cadastro de usuarios Lovable e opcional (so para geracao SQL)
-    if os.path.exists(config.USER_DASHBOARDS_PATH):
-        tabela.add_row("Cadastro usuarios Lovable", "[green]OK[/green]", config.USER_DASHBOARDS_PATH)
+            if mode == "gestao":
+                necessarias = [
+                    (config.SHEET_GESTAO_AREAS, "Aba de gestores"),
+                    (config.SHEET_GESTAO_SCHEDULE, "Aba de agendamento"),
+                ]
+            else:
+                necessarias = [
+                    (config.SHEET_LIDERES_DOACOES, "Aba de lideres/doacoes"),
+                    (config.SHEET_LIDERES_SCHEDULE, "Aba de agendamento"),
+                ]
+
+            for aba_nome, rotulo in necessarias:
+                if aba_nome in abas:
+                    tabela.add_row(rotulo, "[green]OK[/green]", f"{config.EXCEL_INPUT_PATH} -> [{aba_nome}]")
+                else:
+                    tabela.add_row(rotulo, "[red]FALTA[/red]", f"Aba '{aba_nome}' ausente em {config.EXCEL_INPUT_PATH}")
+                    tudo_ok = False
+
+            aba_usr = config.USER_DASHBOARDS_ABAS.get(mode)
+            if aba_usr in abas:
+                tabela.add_row("Aba usuarios Lovable", "[green]OK[/green]", f"{config.EXCEL_INPUT_PATH} -> [{aba_usr}]")
+            else:
+                tabela.add_row("Aba usuarios Lovable", "[yellow]OPCIONAL[/yellow]", f"Aba '{aba_usr}' ausente (geracao SQL sera pulada)")
+        except Exception as e:
+            tabela.add_row("Planilha de entrada", "[red]ERRO[/red]", f"Falha ao ler {config.EXCEL_INPUT_PATH}: {e}")
+            tudo_ok = False
 
     Path(config.BUILD_DIR).mkdir(exist_ok=True)
     Path(config.LOG_DIR).mkdir(exist_ok=True)

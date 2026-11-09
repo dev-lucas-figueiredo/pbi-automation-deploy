@@ -40,23 +40,35 @@ BUILD_DIR = "build"
 LOG_DIR = "logs"
 SQL_DIR = "sql"
 
-# Modo gestao: painel por RESPONSAVEL (dGestão).
-EXCEL_FILE_PATH = os.path.join("data", "gestao_areas.xlsx")
-REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule_gestao.xlsx")
+# Planilha unica de dados de entrada do pipeline (nunca versionada no git)
+EXCEL_INPUT_PATH = os.path.join("data", "dados_entrada.xlsx")
 
-# Modo lideres: painel por doacoes do lider (dDoação).
-LIDERES_PROJETO_PATH = os.path.join("data", "lideres_projeto.xlsx")
-LIDERES_REFRESH_SCHEDULE_PATH = os.path.join("data", "refresh_schedule_lideres.xlsx")
+# Nomes padronizados das abas na planilha unica de entrada
+SHEET_GESTAO_AREAS = "Gestão - Áreas"
+SHEET_GESTAO_SCHEDULE = "Gestão - Agendamento"
+SHEET_GESTAO_USUARIOS = "Gestão - Usuários"
 
-# Cadastro de usuarios do Lovable: editado no OneDrive da FAS, baixado para
-# data/ antes do deploy. Nunca versionado (contem credenciais). Uma aba por modo.
-USER_DASHBOARDS_PATH = os.path.join(
-    "data", "Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx"
-)
-USER_DASHBOARDS_ABAS = {
-    "gestao": "Gestão - Lista de Usuários",
-    "lideres": "Líder - Lista de Usuários",
+SHEET_LIDERES_DOACOES = "Líderes - Doações"
+SHEET_LIDERES_SCHEDULE = "Líderes - Agendamento"
+SHEET_LIDERES_USUARIOS = "Líderes - Usuários"
+
+# Mapeamentos de abas por modo
+SCHEDULE_ABAS = {
+    "gestao": SHEET_GESTAO_SCHEDULE,
+    "lideres": SHEET_LIDERES_SCHEDULE,
 }
+
+USER_DASHBOARDS_ABAS = {
+    "gestao": SHEET_GESTAO_USUARIOS,
+    "lideres": SHEET_LIDERES_USUARIOS,
+}
+
+# Aliases de compatibilidade
+EXCEL_FILE_PATH = EXCEL_INPUT_PATH
+REFRESH_SCHEDULE_PATH = EXCEL_INPUT_PATH
+LIDERES_PROJETO_PATH = EXCEL_INPUT_PATH
+LIDERES_REFRESH_SCHEDULE_PATH = EXCEL_INPUT_PATH
+USER_DASHBOARDS_PATH = EXCEL_INPUT_PATH
 
 
 

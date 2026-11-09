@@ -1,11 +1,13 @@
-"""Leitura das planilhas de entrada e geracao do SQL de user_dashboards.
+"""Leitura da planilha de entrada (dados_entrada.xlsx) e geracao do SQL de user_dashboards.
 
 Fonte de dados do pipeline:
-    gestao_areas.xlsx                mapeamento de gestoes (modo gestao).
-    lideres_projeto.xlsx             mapeamento lider -> doacoes (modo lideres).
-    refresh_schedule*.xlsx           horarios de refresh (um arquivo por modo).
-    Cadastro de usuarios Lovable     credenciais/URLs para o SQL de carga
-                                     (OneDrive da FAS, uma aba por modo).
+    dados_entrada.xlsx               Planilha unica de entrada com as abas:
+                                     - Gestão - Áreas
+                                     - Gestão - Agendamento
+                                     - Gestão - Usuários
+                                     - Líderes - Doações
+                                     - Líderes - Agendamento
+                                     - Líderes - Usuários
 """
 
 from datetime import datetime
@@ -30,20 +32,23 @@ def _normalizar_doacao(valor):
     return s.strip().upper()
 
 
-def carregar_lideres_doacoes():
+def carregar_lideres_doacoes(path=config.EXCEL_INPUT_PATH, sheet_name=config.SHEET_LIDERES_DOACOES):
     """
-    Le data/lideres_projeto.xlsx e retorna dict {lider: [doacoes]}.
+    Le a aba de lideres e doacoes e retorna dict {lider: [doacoes]}.
 
     Uma linha por lider; a coluna doacao traz as doacoes separadas por
     virgula. Linhas com lider ou doacao vazios sao ignoradas. As doacoes sao
     normalizadas para casar com dDoação.DOAÇÃO e deduplicadas preservando a
     ordem de leitura.
     """
-    df = pd.read_excel(config.LIDERES_PROJETO_PATH, dtype=str)
+    try:
+        df = pd.read_excel(path, sheet_name=sheet_name, dtype=str)
+    except Exception:
+        df = pd.read_excel(path, dtype=str)
 
     for col in ("lider", "doacao"):
         if col not in df.columns:
-            raise Exception(f"Coluna '{col}' ausente em {config.LIDERES_PROJETO_PATH}")
+            raise Exception(f"Coluna '{col}' ausente na aba '{sheet_name}' em {path}")
 
     lideres = {}
     for _, row in df.iterrows():
@@ -64,14 +69,25 @@ def carregar_lideres_doacoes():
     return lideres
 
 
-def carregar_schedule(path=config.REFRESH_SCHEDULE_PATH):
+def carregar_schedule(target=None, path=config.EXCEL_INPUT_PATH, sheet_name=None):
     """
-    Le a planilha de agendamento e retorna dict {chave: [horarios]}.
+    Le o agendamento de refresh e retorna dict {chave: [horarios]}.
+    `target` ou `sheet_name` pode ser o nome da aba (ex.: 'Gestão - Agendamento')
+    ou o caminho de um arquivo legado (.xlsx).
     A chave e o gestor (modo gestao) ou o lider (modo lideres); a funcao aceita
     as duas colunas ('gestor' ou 'lider'). Celula 'horarios' vazia = sem
     agendamento automatico; chaves ausentes usam o padrao do chamador.
     """
-    df = pd.read_excel(path, dtype=str)
+    aba = sheet_name or target
+    if target and target.endswith(".xlsx"):
+        df = pd.read_excel(target, dtype=str)
+    elif aba:
+        try:
+            df = pd.read_excel(path, sheet_name=aba, dtype=str)
+        except Exception:
+            df = pd.read_excel(path, dtype=str)
+    else:
+        df = pd.read_excel(path, dtype=str)
     coluna_chave = "lider" if "lider" in df.columns else "gestor"
     schedule = {}
     for _, row in df.iterrows():
@@ -89,13 +105,12 @@ def carregar_schedule(path=config.REFRESH_SCHEDULE_PATH):
 
 def gerar_sql_user_dashboards(mode: str = ""):
     """
-    Le a aba do modo no cadastro de usuarios Lovable e gera
+    Le a aba do modo no cadastro de usuarios da planilha de entrada e gera
     sql/carga_user_dashboards_{mode}.sql.
 
-    O cadastro (USER_DASHBOARDS_PATH) e editado no OneDrive da FAS e baixado
-    para data/; tem uma aba por modo (USER_DASHBOARDS_ABAS). Apenas as colunas
-    usuario, senha e url_painel sao usadas; colunas extras da planilha
-    (identificacao do lider/gestao, formulas auxiliares) sao ignoradas.
+    O cadastro fica em dados_entrada.xlsx com uma aba por modo (USER_DASHBOARDS_ABAS).
+    Apenas as colunas usuario, senha e url_painel sao usadas; colunas extras da
+    planilha (identificacao do lider/gestao, formulas auxiliares) sao ignoradas.
 
     O backend (Lovable Cloud) tem uma tabela e uma funcao de upsert por modo:
     public.user_dashboards_gestao / upsert_user_dashboard_gestao e
@@ -118,7 +133,7 @@ def gerar_sql_user_dashboards(mode: str = ""):
         Panel(
             Text.assemble(
                 ("ETAPA FINAL / GERACAO SQL\n", "bold white"),
-                (f"Origem: cadastro Lovable (aba '{aba}')  →  Destino: sql/{nome_sql}", "dim"),
+                (f"Origem: planilha de entrada (aba '{aba}')  →  Destino: sql/{nome_sql}", "dim"),
             ),
             border_style="cyan",
             padding=(0, 2),
@@ -128,16 +143,16 @@ def gerar_sql_user_dashboards(mode: str = ""):
     if not config.URL_ENCRYPTION_KEY:
         raise Exception("URL_ENCRYPTION_KEY ausente no .env")
 
-    df = pd.read_excel(config.USER_DASHBOARDS_PATH, sheet_name=aba, dtype=str)
+    df = pd.read_excel(config.EXCEL_INPUT_PATH, sheet_name=aba, dtype=str)
 
     colunas_obrigatorias = ["usuario", "senha", "url_painel"]
     for col in colunas_obrigatorias:
         if col not in df.columns:
-            raise Exception(f"Coluna '{col}' ausente em {config.USER_DASHBOARDS_PATH}")
+            raise Exception(f"Coluna '{col}' ausente na aba '{aba}' em {config.EXCEL_INPUT_PATH}")
 
     df = df.dropna(subset=colunas_obrigatorias)
     if df.empty:
-        raise Exception(f"Nenhum registro valido em {config.USER_DASHBOARDS_PATH}")
+        raise Exception(f"Nenhum registro valido na aba '{aba}' em {config.EXCEL_INPUT_PATH}")
 
     linhas = []
     for _, row in df.iterrows():

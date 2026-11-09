@@ -11,9 +11,10 @@ agendamento/refresh. Há **dois modos**, cada um com seu `.bat`:
 
 - **gestao** (`run_deploy_gestao.bat`): 1 painel por gestão, filtro
   `dGestão.RESPONSAVEL` (com o consolidado especial GFP+KFW). Fonte:
-  `data/gestao_areas.xlsx`.
+  aba `Gestão - Áreas` em `data/dados_entrada.xlsx`.
 - **lideres** (`run_deploy_lideres.bat`): 1 painel por líder de projeto, filtro
-  `dDoação.DOAÇÃO` com as doações daquele líder. Fonte: `data/lideres_projeto.xlsx`.
+  `dDoação.DOAÇÃO` com as doações daquele líder. Fonte:
+  aba `Líderes - Doações` em `data/dados_entrada.xlsx`.
 
 O modo é passado como argumento (`python -m pbi_deploy.main <gestao|lideres>`);
 o usuário final só dá duplo clique no `.bat` do modo desejado, sem CLI.
@@ -160,10 +161,12 @@ das fases.
 
 ### Comuns aos dois modos
 
-- Cada modo tem seu par (planilha de entrada + planilha de agendamento):
-  gestao usa `gestao_areas.xlsx` + `refresh_schedule_gestao.xlsx`; lideres usa
-  `lideres_projeto.xlsx` + `refresh_schedule_lideres.xlsx`. `carregar_schedule(path)`
-  recebe o caminho por parâmetro e aceita coluna `gestor` ou `lider`.
+- Toda a entrada fica centralizada em `data/dados_entrada.xlsx` (nunca versionada
+  no git, pois todo o conteúdo da pasta `data/` é ignorado).
+- Cada modo usa suas abas correspondentes:
+  gestao usa `Gestão - Áreas` + `Gestão - Agendamento`; lideres usa
+  `Líderes - Doações` + `Líderes - Agendamento`. `carregar_schedule(target)`
+  aceita o nome da aba ou caminho de arquivo e aceita coluna `gestor` ou `lider`.
 - Os dois modos publicam no **mesmo** `WORKSPACE_ID`. Não há colisão porque os
   nomes de item diferem (`... - DAF` vs `... - Fabiana Cunha`). Rodar os dois
   cria os dois conjuntos de painéis lado a lado no workspace.
@@ -176,20 +179,19 @@ das fases.
   mesma estrutura). `mode` é obrigatório aqui e a função levanta exceção se não
   for `"gestao"` ou `"lideres"`; não existe mais uma função/tabela genérica
   `upsert_user_dashboard`/`user_dashboards` sem sufixo.
-- A origem dos logins é o **cadastro de usuários Lovable**
-  (`config.USER_DASHBOARDS_PATH`, arquivo `Cadastro de usuários Lovable - Painel
-  Financeiro Executivo.xlsx` baixado do OneDrive da FAS para `data/`), com uma
-  aba por modo (`config.USER_DASHBOARDS_ABAS`). Só as colunas `usuario`, `senha`
-  e `url_painel` são lidas; as demais (identificação, fórmulas) são ignoradas e
-  linhas incompletas são descartadas. O arquivo contém senhas em texto plano e
-  está no `.gitignore` (`data/Cadastro*.xlsx`); **nunca** o adicione ao git.
+- A origem dos logins é a aba de usuários da planilha única (`config.USER_DASHBOARDS_ABAS`:
+  `Gestão - Usuários` ou `Líderes - Usuários` em `data/dados_entrada.xlsx`).
+  Só as colunas `usuario`, `senha` e `url_painel` são lidas; as demais (identificação,
+  fórmulas) são ignoradas e linhas incompletas são descartadas. O arquivo contém
+  senhas em texto plano e a pasta `data/` inteira está no `.gitignore` (`data/*`);
+  **nunca** o adicione ao git.
 
 ### Modo gestão (RESPONSAVEL)
 
 - O consolidado `"GFP e KFW"` é um caso especial em `builder.clone_and_compile_gestao`
   e em `pipeline._identificar_gestores`: agrupa `GFP` com todos os gestores cujo
   nome começa com `KFW`. Qualquer mudança na regra precisa refletir nos dois lugares.
-- `gestao_areas.xlsx` ignora linhas onde `RESPONSAVEL == SUPERINTENDÊNCIA`
+- A aba `Gestão - Áreas` ignora linhas onde `RESPONSAVEL == SUPERINTENDÊNCIA`
   (filtro intencional). Não há mais tratamento especial para a `GRI` (nem para a
   superintendência `SG`): qualquer gestão, inclusive `GRI`, que ainda apareça nas
   planilhas é um painel comum, filtrado só pelo próprio `RESPONSAVEL`.
@@ -208,10 +210,9 @@ das fases.
   quase sempre nome de doação digitado diferente do modelo.
 - Uma mesma doação pode aparecer para mais de um líder (aparece no painel de
   cada um). Intencional, sem restrição de unicidade.
-- `lideres_projeto.xlsx` tem **uma linha por líder**; a coluna `doacao` traz as
+- A aba `Líderes - Doações` tem **uma linha por líder**; a coluna `doacao` traz as
   doações separadas por vírgula (a coluna `email` é só referência, não é lida
   pelo pipeline).
-- Acesso irrestrito (ex.: superintendentes) **não entra** em `lideres_projeto.xlsx`:
+- Acesso irrestrito (ex.: superintendentes) **não entra** em `Líderes - Doações`:
   usa o painel mestre publicado direto da pasta `template/` (sem filtro), e o
-  login é compartilhado no cadastro de usuários Lovable colando a mesma
-  `url_painel` nas linhas dessas pessoas.
+  login é compartilhado colando a mesma `url_painel` nas linhas dessas pessoas.

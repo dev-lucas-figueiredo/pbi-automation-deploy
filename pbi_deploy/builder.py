@@ -97,7 +97,10 @@ def _responsaveis_da_gestao(gestao_name):
     gestoes filtram apenas o proprio nome.
     """
     if gestao_name == "GFP e KFW":
-        df = pd.read_excel(config.EXCEL_FILE_PATH)
+        try:
+            df = pd.read_excel(config.EXCEL_INPUT_PATH, sheet_name=config.SHEET_GESTAO_AREAS)
+        except Exception:
+            df = pd.read_excel(config.EXCEL_INPUT_PATH)
         gestores_kfw = df[df["RESPONSAVEL"].str.startswith("KFW", na=False)]["RESPONSAVEL"].unique().tolist()
         return ["GFP"] + gestores_kfw
     return [gestao_name]

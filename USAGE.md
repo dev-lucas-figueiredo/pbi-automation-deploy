@@ -12,11 +12,11 @@ pipeline. Para uma visão geral do projeto e da arquitetura, consulte o
 2. [Primeiros passos após o download](#2-primeiros-passos-após-o-download)
 3. [Estrutura de pastas esperada](#3-estrutura-de-pastas-esperada)
 4. [Preparação do template Power BI](#4-preparação-do-template-power-bi)
-5. [Planilhas de entrada (pasta `data/`)](#5-planilhas-de-entrada-pasta-data)
-   - 5.1 [`lideres_projeto.xlsx`](#51-lideres_projetoxlsx) (modo líderes)
-   - 5.2 [`gestao_areas.xlsx`](#52-gestao_areasxlsx) (modo gestão)
-   - 5.3 [Agendamento: `refresh_schedule*.xlsx`](#53-agendamento-refresh_schedulexlsx)
-   - 5.4 [Cadastro de usuários Lovable](#54-cadastro-de-usuários-lovable---painel-financeiro-executivoxlsx)
+5. [Planilha única de entrada (`data/dados_entrada.xlsx`)](#5-planilha-única-de-entrada-datadados_entradaxlsx)
+   - 5.1 [Aba `Líderes - Doações` (modo líderes)](#51-aba-líderes---doações)
+   - 5.2 [Aba `Gestão - Áreas` (modo gestão)](#52-aba-gestão---áreas)
+   - 5.3 [Abas de agendamento (`Gestão - Agendamento` e `Líderes - Agendamento`)](#53-abas-de-agendamento)
+   - 5.4 [Abas de usuários Lovable (`Gestão - Usuários` e `Líderes - Usuários`)](#54-abas-de-usuários-lovable)
 6. [Configuração do `.env`](#6-configuração-do-env)
 7. [Execução do pipeline](#7-execução-do-pipeline)
 8. [O que acontece em cada etapa](#8-o-que-acontece-em-cada-etapa)
@@ -67,10 +67,10 @@ O pipeline tem **dois modos**, cada um com seu `.bat`:
 
 - **Gestão** (`run_deploy_gestao.bat`): clona uma cópia por gestão, injetando o
   filtro de `RESPONSAVEL` na entidade `dGestão` (com o consolidado GFP+KFW).
-  Fonte: `gestao_areas.xlsx`.
+  Fonte: aba `Gestão - Áreas` em `data/dados_entrada.xlsx`.
 - **Líderes** (`run_deploy_lideres.bat`): clona uma cópia por líder de projeto,
   injetando o filtro com as doações daquele líder na entidade `dDoação`. Fonte:
-  `lideres_projeto.xlsx`.
+  aba `Líderes - Doações` em `data/dados_entrada.xlsx`.
 
 Em ambos, o pipeline publica cada modelo semântico e relatório no Microsoft
 Fabric e, por fim, configura agendamento de refresh e dispara uma atualização
@@ -89,13 +89,11 @@ primeira vez, você precisa adicioná-los manualmente:
 | --------------------------- | -------------------- | ----------------------------------------------------------------------------- |
 | `.env`                      | Raiz do projeto      | Solicite ao administrador do projeto. Contém credenciais Azure e chaves.       |
 | Template Power BI (`.pbip`) | Pasta `template/`    | Salve o relatório-mestre no formato `.pbip` dentro de `template/` (ver seção 4). |
-| `lideres_projeto.xlsx`      | Pasta `data/`        | (Modo líderes) Monte o mapeamento líder -> doações (ver seção 5.1).            |
-| `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx` | Pasta `data/` | Baixe do OneDrive da FAS (ver seção 5.4). Opcional, sendo necessário apenas para geração de SQL. |
+| `dados_entrada.xlsx`        | Pasta `data/`        | Planilha única com todas as abas de dados de entrada do pipeline (ver seção 5). |
 
-Os demais arquivos (código, planilhas `gestao_areas.xlsx`, `refresh_schedule_gestao.xlsx`
-e `refresh_schedule_lideres.xlsx`, ambiente Python `env/`, etc.) **já vêm
-incluídos** no download e estão prontos para uso. Você só precisa adicionar
-`lideres_projeto.xlsx` se for usar o modo líderes.
+Os demais arquivos (código, ambiente Python `env/`, etc.) **já vêm
+incluídos** no download e estão prontos para uso. A pasta `data/` é completamente
+ignorada pelo Git para segurança dos dados e credenciais.
 
 ---
 
@@ -110,13 +108,8 @@ pbi-automation-deploy/
 ├── run_deploy_lideres.bat               ← entrada do usuário (modo líderes)
 ├── requirements.txt                     ← dependências Python
 │
-├── data/                                ← planilhas de entrada (ver seção 5)
-│   ├── gestao_areas.xlsx                   (modo gestão, já incluída)
-│   ├── refresh_schedule_gestao.xlsx          (modo gestão, já incluída)
-│   ├── lideres_projeto.xlsx                (modo líderes, adicionar manualmente, ver seção 5.1)
-│   ├── refresh_schedule_lideres.xlsx       (modo líderes, já incluída)
-│   └── Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx
-│                                           (baixar do OneDrive, opcional, ver seção 5.4)
+├── data/                                ← planilha de entrada (ver seção 5)
+│   └── dados_entrada.xlsx               (planilha única com abas de áreas, doações, agendamento e usuários)
 │
 ├── template/                            ← adicionar o template Power BI (ver seção 4)
 │   ├── <nome do template>.pbip           (nome livre, ex.: Painel Financeiro Executivo - 2.0)
@@ -204,26 +197,28 @@ Para atualizar o template (ex.: novo visual, nova medida), basta:
 
 ---
 
-## 5. Planilhas de entrada (pasta `data/`)
+## 5. Planilha única de entrada (`data/dados_entrada.xlsx`)
 
-Todas as planilhas ficam na pasta `data/`. Cada modo usa seu par de planilhas
-(a de definição dos painéis + a de agendamento); o cadastro de usuários
-Lovable (seção 5.4) é opcional e tem uma aba para cada modo.
+Toda a entrada do pipeline fica centralizada em **`data/dados_entrada.xlsx`**.
+A pasta `data/` é completamente ignorada pelo Git (`data/*`), pois contém
+dados operacionais e credenciais em texto plano.
 
-| Modo    | Define os painéis        | Agendamento                     |
-| ------- | ------------------------ | ------------------------------- |
-| líderes | `lideres_projeto.xlsx`   | `refresh_schedule_lideres.xlsx` |
-| gestão  | `gestao_areas.xlsx`      | `refresh_schedule_gestao.xlsx`  |
+A planilha única contém 6 abas padronizadas:
+
+| Modo    | Define os painéis       | Agendamento de refresh   | Logins Lovable (opcional) |
+| ------- | ----------------------- | ------------------------ | ------------------------- |
+| líderes | `Líderes - Doações`     | `Líderes - Agendamento`  | `Líderes - Usuários`      |
+| gestão  | `Gestão - Áreas`        | `Gestão - Agendamento`   | `Gestão - Usuários`       |
 
 ---
 
-### 5.1. `lideres_projeto.xlsx`
+### 5.1. Aba `Líderes - Doações`
 
-> Modo **líderes** (`run_deploy_lideres.bat`).
+> Usada no modo **líderes** (`run_deploy_lideres.bat`).
 
 | Atributo        | Valor                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
-| **Obrigatória** | Sim                                                                      |
+| **Obrigatória** | Sim (modo líderes)                                                       |
 | **Função**      | Mapeia cada líder de projeto às doações que ele lidera. Cada líder vira um painel. |
 | **Lida por**    | `datasources.py` (função `carregar_lideres_doacoes`)                     |
 
@@ -232,7 +227,7 @@ Lovable (seção 5.4) é opcional e tem uma aba para cada modo.
 | Coluna    | Tipo  | Descrição                                                                                              |
 | --------- | ----- | ----------------------------------------------------------------------------------------------------- |
 | `lider`   | Texto | Nome do líder de projeto. **Uma linha por líder** (não repita o líder em várias linhas). Cada líder distinto gera um painel separado (o nome vira o sufixo do painel). |
-| `email`   | Texto | E-mail do líder, só para referência (facilita achar o login dele no cadastro de usuários Lovable, seção 5.4). **Não é lido pelo pipeline**; pode ficar em branco. |
+| `email`   | Texto | E-mail do líder, apenas para referência. **Não é lido pelo pipeline**; pode ficar em branco.          |
 | `doacao`  | Texto | Todas as doações lideradas por esse líder, **separadas por vírgula**, na mesma célula.                 |
 
 #### Exemplo
@@ -257,20 +252,20 @@ Lovable (seção 5.4) é opcional e tem uma aba para cada modo.
 #### Acesso irrestrito (ex.: superintendentes)
 
 Pessoas que precisam ver **todas** as doações sem filtro (ex.: superintendentes)
-**não entram** em `lideres_projeto.xlsx`. Elas usam o painel mestre publicado
+**não entram** na aba `Líderes - Doações`. Elas usam o painel mestre publicado
 diretamente a partir da pasta `template/` (sem filtro de doação, gerado fora
 deste pipeline), não um painel gerado por líder.
 
-O compartilhamento acontece no cadastro de usuários Lovable (seção 5.4):
+O compartilhamento acontece na aba de usuários Lovable (seção 5.4):
 publique o painel mestre uma vez e cole a **mesma `url_painel`** nas linhas de
 cada pessoa com acesso irrestrito. Cada pessoa mantém seu próprio
 usuário/senha, mas todas apontam para o mesmo painel mestre.
 
 ---
 
-### 5.2. `gestao_areas.xlsx`
+### 5.2. Aba `Gestão - Áreas`
 
-> Modo **gestão** (`run_deploy_gestao.bat`).
+> Usada no modo **gestão** (`run_deploy_gestao.bat`).
 
 | Atributo        | Valor                                                              |
 | --------------- | ------------------------------------------------------------------ |
@@ -280,10 +275,11 @@ usuário/senha, mas todas apontam para o mesmo painel mestre.
 
 #### Colunas necessárias
 
-| Coluna             | Tipo  | Descrição                                                                                                        |
-| ------------------ | ----- | ---------------------------------------------------------------------------------------------------------------- |
-| `RESPONSAVEL`      | Texto | Nome da gestão. Cada valor único gera um painel separado.                                                        |
-| `SUPERINTENDÊNCIA` | Texto | Superintendência da gestão. Linhas onde `RESPONSAVEL` == `SUPERINTENDÊNCIA` são **ignoradas** (evita que a superintendência vire painel individual). |
+| Coluna             | Tipo    | Descrição                                                                                                        |
+| ------------------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `GestaoKey`        | Inteiro | Código numérico da gestão (mantido para compatibilidade).                                                        |
+| `RESPONSAVEL`      | Texto   | Nome da gestão. Cada valor único gera um painel separado.                                                        |
+| `SUPERINTENDÊNCIA` | Texto   | Superintendência da gestão. Linhas onde `RESPONSAVEL` == `SUPERINTENDÊNCIA` são **ignoradas** (evita que a superintendência vire painel individual). |
 
 #### Regra especial: consolidado GFP e KFW
 
@@ -296,17 +292,17 @@ lista individual e um painel consolidado **`GFP e KFW`** é adicionado, agrupand
 Não há mais regra especial para a `GRI`: se ela (ou `PDI`, `PPI`, `SG`) ainda
 constar na planilha, é tratada como qualquer outra gestão, com filtro apenas no
 próprio `RESPONSAVEL` (a regra `RESPONSAVEL == SUPERINTENDÊNCIA` continua
-valendo). Mantenha `gestao_areas.xlsx` e `refresh_schedule_gestao.xlsx` com as
-siglas atuais de `dGestão`.
+valendo). Mantenha `Gestão - Áreas` e `Gestão - Agendamento` com as siglas atuais
+de `dGestão`.
 
 ---
 
-### 5.3. Agendamento: `refresh_schedule*.xlsx`
+### 5.3. Abas de agendamento (`Gestão - Agendamento` e `Líderes - Agendamento`)
 
-Cada modo tem sua planilha de agendamento (mesmo formato, nomes diferentes):
+Cada modo tem sua aba de agendamento dentro de `dados_entrada.xlsx`:
 
-- Modo gestão: **`refresh_schedule_gestao.xlsx`** (coluna-chave `gestor`).
-- Modo líderes: **`refresh_schedule_lideres.xlsx`** (coluna-chave `lider`).
+- Modo gestão: **`Gestão - Agendamento`** (coluna-chave `gestor`).
+- Modo líderes: **`Líderes - Agendamento`** (coluna-chave `lider`).
 
 | Atributo        | Valor                                                                                     |
 | --------------- | ----------------------------------------------------------------------------------------- |
@@ -318,8 +314,8 @@ Cada modo tem sua planilha de agendamento (mesmo formato, nomes diferentes):
 
 | Coluna            | Tipo  | Descrição                                                                                                                                      |
 | ----------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gestor`/`lider`  | Texto | Nome da gestão (modo gestão) ou do líder (modo líderes), **exatamente como aparece** na planilha de definição correspondente.                   |
-| `horarios`        | Texto | Horários de refresh separados por vírgula, no formato `HH:MM`. Fuso: **SA Western Standard Time (UTC−4, Manaus)**. Se vazio, o agendamento é desativado. |
+| `gestor`/`lider`  | Texto | Nome da gestão (modo gestão) ou do líder (modo líderes), **exatamente como aparece** na aba de definição correspondente.                         |
+| `horarios`        | Texto | Horários de refresh separados por vírgula, no formato `HH:MM`. Fuso: **SA Western Standard Time (UTC-4, Manaus)**. Se vazio, o agendamento é desativado. |
 
 #### Exemplo (modo líderes)
 
@@ -330,14 +326,14 @@ Cada modo tem sua planilha de agendamento (mesmo formato, nomes diferentes):
 | Wildney Mourão   |                   |
 
 > **Notas:**
-> - Unidades que **não aparecem** na planilha recebem o horário padrão `08:00, 18:00`.
+> - Unidades que **não aparecem** na aba recebem o horário padrão `08:00, 18:00`.
 > - Unidades com a célula `horarios` **vazia** têm o agendamento **desativado**.
 > - O agendamento roda **todos os dias da semana** (domingo a sábado).
 > - A função aceita as duas colunas: usa `lider` se existir, senão `gestor`.
 
 ---
 
-### 5.4. `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx`
+### 5.4. Abas de usuários Lovable (`Gestão - Usuários` e `Líderes - Usuários`)
 
 | Atributo       | Valor                                                                              |
 | -------------- | ---------------------------------------------------------------------------------- |
@@ -345,21 +341,12 @@ Cada modo tem sua planilha de agendamento (mesmo formato, nomes diferentes):
 | **Função**     | Cadastro de logins do Lovable. Gera o arquivo `sql/carga_user_dashboards_{modo}.sql` (ex.: `carga_user_dashboards_gestao.sql`) com comandos de upsert para um banco PostgreSQL |
 | **Lida por**   | `datasources.py` (função `gerar_sql_user_dashboards`)                               |
 
-#### Fluxo de edição (OneDrive)
+#### Abas por modo
 
-A planilha "mestre" vive no **OneDrive da FAS** e é editada online. Antes de
-rodar o deploy: baixe-a do OneDrive e coloque-a na pasta `data/` com o nome
-exato `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx`.
-
-> **Nunca versione este arquivo** (contém senhas em texto plano). O `.gitignore`
-> já bloqueia `data/Cadastro*.xlsx`; não force a adição com `git add -f`.
-
-#### Abas (uma por modo)
-
-| Aba                          | Usada pelo `.bat`         | Grava na tabela             |
-| ---------------------------- | -------------------------- | ---------------------------- |
-| `Líder - Lista de Usuários`  | `run_deploy_lideres.bat`   | `user_dashboards_lideres`    |
-| `Gestão - Lista de Usuários` | `run_deploy_gestao.bat`    | `user_dashboards_gestao`     |
+| Aba                  | Usada pelo `.bat`         | Grava na tabela             |
+| -------------------- | -------------------------- | ---------------------------- |
+| `Líderes - Usuários` | `run_deploy_lideres.bat`   | `user_dashboards_lideres`    |
+| `Gestão - Usuários`  | `run_deploy_gestao.bat`    | `user_dashboards_gestao`     |
 
 #### Colunas usadas pelo pipeline
 
@@ -369,7 +356,9 @@ exato `Cadastro de usuários Lovable - Painel Financeiro Executivo.xlsx`.
 | `senha`      | Texto | Senha do usuário.                                                                            |
 | `url_painel` | Texto | URL do painel publicado no Power BI. Será criptografada no SQL gerado usando `URL_ENCRYPTION_KEY`. |
 
-As demais colunas das abas (`lider`, `sufixo_painel`, colunas de fórmula
+As demais colunas das abas (`lider`, `sufixo_painel`, etc.) são ignoradas pelo
+pipeline e servem apenas para identificação humana na planilha. Linhas com
+`usuario`, `senha` ou `url_painel` em branco são descartadas automaticamente.
 auxiliar de senha etc.) são só referência para quem edita a planilha e **são
 ignoradas** pelo pipeline. Linhas com `usuario`, `senha` ou `url_painel` em
 branco (incluindo linhas de observação) são descartadas automaticamente.
@@ -624,27 +613,27 @@ para os painéis por líder de projeto. Cada modo usa suas próprias planilhas
 
 ### Como adicionar um novo líder? (modo líderes)
 
-1. Adicione uma linha em `data/lideres_projeto.xlsx` com o nome na coluna `lider`
+1. Adicione uma linha na aba `Líderes - Doações` em `data/dados_entrada.xlsx` com o nome na coluna `lider`
    e todas as doações dele, separadas por vírgula, na coluna `doacao`.
-2. Opcionalmente, adicione o líder em `data/refresh_schedule_lideres.xlsx` com os
+2. Opcionalmente, adicione o líder na aba `Líderes - Agendamento` com os
    horários desejados (se não adicionar, usará `08:00, 18:00` como padrão).
 3. Execute `run_deploy_lideres.bat`.
 
 ### Como adicionar/remover uma gestão? (modo gestão)
 
-Edite `data/gestao_areas.xlsx` (coluna `RESPONSAVEL`) e, opcionalmente,
-`data/refresh_schedule_gestao.xlsx`. Execute `run_deploy_gestao.bat`.
+Edite a aba `Gestão - Áreas` em `data/dados_entrada.xlsx` (coluna `RESPONSAVEL`) e, opcionalmente,
+a aba `Gestão - Agendamento`. Execute `run_deploy_gestao.bat`.
 
 ### Como remover um líder ou gestão do pipeline?
 
-Remova as linhas correspondentes na planilha do modo. Na próxima execução o
+Remova as linhas correspondentes na aba do modo em `data/dados_entrada.xlsx`. Na próxima execução o
 pipeline não processará aquela unidade. **O painel já publicado no workspace
 não é excluído automaticamente**; remova-o manualmente pelo portal do
 Fabric/Power BI.
 
 ### O painel de um líder abriu vazio. O que houve?
 
-Quase sempre é um nome de doação em `lideres_projeto.xlsx` que não corresponde
+Quase sempre é um nome de doação na aba `Líderes - Doações` que não corresponde
 exatamente à coluna `DOAÇÃO` do modelo. Confira o nome da doação como ele aparece
 no relatório e ajuste a planilha (o pipeline normaliza maiúsculas e espaços das
 pontas, mas não corrige diferenças de digitação no meio do texto).
@@ -652,9 +641,9 @@ pontas, mas não corrige diferenças de digitação no meio do texto).
 ### O que é o agendamento de refresh?
 
 Após publicar os modelos, o pipeline configura a atualização automática dos
-dados no Power BI Service. Os horários vêm da planilha de agendamento do modo
-(`refresh_schedule_gestao.xlsx` ou `refresh_schedule_lideres.xlsx`) e o fuso horário é
-**SA Western Standard Time (UTC−4, horário de Manaus)**.
+dados no Power BI Service. Os horários vêm da aba de agendamento do modo
+(`Gestão - Agendamento` ou `Líderes - Agendamento`) e o fuso horário é
+**SA Western Standard Time (UTC-4, horário de Manaus)**.
 
 ### Onde encontro os logs de erro?
 

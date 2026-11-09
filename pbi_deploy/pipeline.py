@@ -61,8 +61,8 @@ def _identificar_gestores(df):
 
 
 def _preparar_gestao():
-    """Le gestao_areas.xlsx e retorna (unidades, compilar, schedule_path, rotulo)."""
-    df = pd.read_excel(config.EXCEL_FILE_PATH)
+    """Le a aba 'Gestão - Áreas' e retorna (unidades, compilar, schedule_aba, rotulo)."""
+    df = pd.read_excel(config.EXCEL_INPUT_PATH, sheet_name=config.SHEET_GESTAO_AREAS)
     gestores, gestores_kfw, gestores_invalidos = _identificar_gestores(df)
 
     if gestores_invalidos:
@@ -80,11 +80,11 @@ def _preparar_gestao():
     def compilar(gestor):
         return clone_and_compile_gestao(gestor)
 
-    return gestores, compilar, config.REFRESH_SCHEDULE_PATH, "gestores"
+    return gestores, compilar, config.SHEET_GESTAO_SCHEDULE, "gestores"
 
 
 def _preparar_lideres():
-    """Le lideres_projeto.xlsx e retorna (unidades, compilar, schedule_path, rotulo)."""
+    """Le a aba 'Líderes - Doações' e retorna (unidades, compilar, schedule_aba, rotulo)."""
     lideres = carregar_lideres_doacoes()
     lideres_lista = list(lideres.keys())
     total_doacoes = sum(len(v) for v in lideres.values())
@@ -97,7 +97,7 @@ def _preparar_lideres():
     def compilar(lider):
         return clone_and_compile_lider(lider, lideres[lider])
 
-    return lideres_lista, compilar, config.LIDERES_REFRESH_SCHEDULE_PATH, "lideres"
+    return lideres_lista, compilar, config.SHEET_LIDERES_SCHEDULE, "lideres"
 
 
 def main(mode):
@@ -182,7 +182,7 @@ def main(mode):
 
     schedule_map = carregar_schedule(schedule_path)
     console.print(
-        f"  Agendamentos carregados de [cyan]{os.path.basename(schedule_path)}[/cyan]: "
+        f"  Agendamentos carregados da aba [cyan]{schedule_path}[/cyan]: "
         f"{len(schedule_map)} {rotulo}\n"
     )
 
@@ -247,8 +247,8 @@ def main(mode):
 
     console.print(
         f"[dim]Refresh enfileirado. Os dados sao carregados em background "
-        f"e podem levar alguns minutos. Para alterar horarios, edite {schedule_path} "
-        f"e rode o script novamente.[/dim]"
+        f"e podem levar alguns minutos. Para alterar horarios, edite a aba '{schedule_path}' "
+        f"em {config.EXCEL_INPUT_PATH} e rode o script novamente.[/dim]"
     )
 
     fim = datetime.now()
@@ -346,9 +346,15 @@ def main(mode):
         )
     console.print(f"\n[dim]Log estruturado salvo em: {log_path}[/dim]\n")
 
-    if os.path.exists(config.USER_DASHBOARDS_PATH):
+    aba_usr = config.USER_DASHBOARDS_ABAS.get(mode)
+    if os.path.exists(config.EXCEL_INPUT_PATH):
         try:
-            gerar_sql_user_dashboards(mode)
+            import openpyxl
+            wb_check = openpyxl.load_workbook(config.EXCEL_INPUT_PATH, read_only=True)
+            tem_aba = aba_usr in wb_check.sheetnames
+            wb_check.close()
+            if tem_aba:
+                gerar_sql_user_dashboards(mode)
         except Exception as e:
             console.print(f"[yellow]Falha ao gerar SQL de user_dashboards: {e}[/yellow]\n")
 

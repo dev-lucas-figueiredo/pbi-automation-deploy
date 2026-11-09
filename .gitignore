@@ -4,15 +4,14 @@
 # Ignorar conteúdo das pastas, mas manter a estrutura (via .gitkeep)
 build/*
 !build/.gitkeep
+data/*
+!data/.gitkeep
 logs/*
 !logs/.gitkeep
 sql/*
 !sql/.gitkeep
 template/*
 !template/.gitkeep
-
-# Arquivos de dados com credenciais (nunca versionar)
-data/Cadastro*.xlsx
 
 # Arquivos gerados pelo Python
 __pycache__/

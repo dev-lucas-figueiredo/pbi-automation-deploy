@@ -14,8 +14,10 @@ def planilha(tmp_path, monkeypatch):
             "SUPERINTENDÊNCIA": ["SF", "SF", "SF", "SF", "SG", "SG", "SG"],
         }
     )
-    caminho = tmp_path / "gestao_areas.xlsx"
-    df.to_excel(caminho, index=False)
+    caminho = tmp_path / "dados_entrada.xlsx"
+    with pd.ExcelWriter(caminho) as writer:
+        df.to_excel(writer, sheet_name=config.SHEET_GESTAO_AREAS, index=False)
+    monkeypatch.setattr(config, "EXCEL_INPUT_PATH", str(caminho))
     monkeypatch.setattr(config, "EXCEL_FILE_PATH", str(caminho))
     return df
 
